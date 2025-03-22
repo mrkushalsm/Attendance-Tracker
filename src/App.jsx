@@ -1,11 +1,25 @@
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
+import Home from "./pages/Home";
+import Dashboard from "./pages/DashboardPage.jsx";
+import AttendancePage from "./pages/AttendancePage";
+import SettingsPage from "./pages/SettingsPage";
+import FloatingSettingsButton from "./components/FloatingSettingsButton";
+
 const App = () => {
     return (
-        <div className="flex items-center justify-center h-screen bg-base-100">
-            <div className="p-6 shadow-xl card bg-primary text-primary-content">
-                <h1 className="text-3xl font-bold">Attendance Tracker 🚀</h1>
-                <button className="mt-4 btn btn-secondary">Get Started</button>
-            </div>
-        </div>
+        <>
+            <Toaster position="top-right" reverseOrder={false} />
+            <Router>
+                <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/attendance" element={<AttendancePage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                </Routes>
+                <FloatingSettingsButton />
+            </Router>
+        </>
     );
 };
 
