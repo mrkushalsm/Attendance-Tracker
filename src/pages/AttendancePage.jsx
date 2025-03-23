@@ -45,28 +45,23 @@ const AttendancePage = () => {
     const markAttendance = async (id, status) => {
         const subject = await db.subjects.get(id);
         const today = getToday();
-
-        // Check if today's attendance already exists
         const existingRecord = subject.attendanceRecords?.find(a => a.date === today);
 
         let newStrictTotal = subject.totalStrictClasses || 0;
         let newRelaxedTotal = subject.totalRelaxedClasses || 0;
 
         if (existingRecord) {
-            // If the status is unchanged, do nothing
-            if (existingRecord.status === status) return;
+            if (existingRecord.status === status) return; // No change needed
 
-            // If changing from Present/Absent to Excused/Sick Leave or vice versa, adjust totals correctly
-            if ((existingRecord.status === "Present" || existingRecord.status === "Absent") &&
-                (status === "Excused" || status === "Sick Leave")) {
-                newStrictTotal--; // Remove from totalStrictClasses
-            }
-            else if ((existingRecord.status === "Excused" || existingRecord.status === "Sick Leave") &&
-                (status === "Present" || status === "Absent")) {
-                newStrictTotal++; // Add back to totalStrictClasses
+            // Adjust totals when changing attendance status
+            if (["Present", "Absent"].includes(existingRecord.status) && ["Excused", "Sick Leave"].includes(status)) {
+                newStrictTotal--;
+                newRelaxedTotal++;
+            } else if (["Excused", "Sick Leave"].includes(existingRecord.status) && ["Present", "Absent"].includes(status)) {
+                newStrictTotal++;
+                newRelaxedTotal--;
             }
 
-            // Update only the status
             const updatedRecords = subject.attendanceRecords.map(a =>
                 a.date === today ? { ...a, status } : a
             );
@@ -74,11 +69,9 @@ const AttendancePage = () => {
             await db.subjects.update(id, { attendanceRecords: updatedRecords, totalStrictClasses: newStrictTotal, totalRelaxedClasses: newRelaxedTotal });
 
         } else {
-            // If marking attendance for the first time today
-            if (status === "Present" || status === "Absent") {
+            if (["Present", "Absent"].includes(status)) {
                 newStrictTotal++;
-                newRelaxedTotal++;
-            } else if (status === "Excused" || status === "Sick Leave") {
+            } else if (["Excused", "Sick Leave"].includes(status)) {
                 newRelaxedTotal++;
             }
 
@@ -91,9 +84,9 @@ const AttendancePage = () => {
             });
         }
 
-        // Update UI
         setSubjects(subjects.map(s => s.id === id ? { ...s, attendance: status } : s));
     };
+
 
 
     const resetTodayAttendance = async () => {
@@ -101,8 +94,24 @@ const AttendancePage = () => {
         if (!confirmed) return;
 
         await Promise.all(subjects.map(async (subject) => {
+            const today = getToday();
+            const existingRecord = subject.attendanceRecords.find(a => a.date === today);
+
+            if (!existingRecord) return;
+
+            let newStrictTotal = subject.totalStrictClasses;
+            let newRelaxedTotal = subject.totalRelaxedClasses;
+
+            if (["Present", "Absent"].includes(existingRecord.status)) {
+                newStrictTotal--;
+            } else if (["Excused", "Sick Leave"].includes(existingRecord.status)) {
+                newRelaxedTotal--;
+            }
+
             await db.subjects.update(subject.id, {
-                attendanceRecords: subject.attendanceRecords.filter(a => a.date !== getToday())
+                attendanceRecords: subject.attendanceRecords.filter(a => a.date !== today),
+                totalStrictClasses: Math.max(0, newStrictTotal),
+                totalRelaxedClasses: Math.max(0, newRelaxedTotal)
             });
         }));
 
@@ -110,17 +119,18 @@ const AttendancePage = () => {
         toast.success("Today's attendance has been reset!");
     };
 
+
     return (
-        <div className="p-4 sm:p-6 space-y-6 max-w-lg mx-auto">
+        <div className="flex flex-col p-4 sm:p-6 space-y-6 max-w-lg mx-auto">
             <h1 className="text-2xl sm:text-3xl font-bold text-center">
                 <FontAwesomeIcon className="mr-2" icon={faCalendarAlt} /> Mark Attendance
             </h1>
 
-            <Link to="/dashboard" className="btn btn-outline w-full sm:w-auto">
+            <Link to="/dashboard" className="btn btn-outline w-full sm:w-auto mt-10">
                 <FontAwesomeIcon className="mr-2" icon={faArrowLeft} /> Back to Dashboard
             </Link>
 
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 mt-10">
                 <input
                     type="text"
                     placeholder="Enter subject name"
