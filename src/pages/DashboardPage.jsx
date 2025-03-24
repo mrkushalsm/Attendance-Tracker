@@ -282,6 +282,7 @@ import {
     faThumbTack,
     faBook,
     faCheckCircle,
+    faTimesCircle,
     faCalendarAlt,
     faChartLine,
 } from "@fortawesome/free-solid-svg-icons";
@@ -357,7 +358,7 @@ const DashboardPage = () => {
     return (
         <div className="p-4 sm:p-6 flex flex-col items-center">
             {/* Heading Outside Container */}
-            <h1 className="text-2xl sm:text-3xl font-bold text-center mb-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-center mb-10">
                 <FontAwesomeIcon icon={faThumbTack} className="mr-2" /> Attendance Dashboard
             </h1>
 
@@ -409,7 +410,7 @@ const DashboardPage = () => {
 
                 {/* Per-Subject Attendance */}
                 <div className="mb-10">
-                    <h2 className="text-xl sm:text-2xl font-bold text-center mb-6">Your Subjects</h2>
+                    <h2 className="text-xl sm:text-2xl font-bold text-center mb-10">Your Subjects</h2>
                     {subjects.length === 0 ? (
                         <p className="text-lg text-gray-500 text-center">No subjects found</p>
                     ) : (
@@ -422,24 +423,31 @@ const DashboardPage = () => {
                                     0
                                 );
 
+                                const totalClasses = totalRelaxedClasses + totalStrictClasses
+                                const absentClasses = totalClasses - adjustedPresent;
+
                                 const hasAdjustedAttendance = attendanceRecords?.some(
                                     (a) => a.status === "Excused" || a.status === "Sick Leave"
                                 );
 
                                 return (
                                     <div key={id} className="p-5 bg-base-100 rounded-lg shadow">
-                                        <h3 className="text-lg sm:text-xl font-bold text-center mb-3">
+                                        <h3 className="text-lg sm:text-xl font-bold text-center mb-5">
                                             <FontAwesomeIcon icon={faBook} className="mr-2" /> {name}
                                         </h3>
 
                                         {/* Attendance Stats */}
                                         <p className="mt-2">
                                             <FontAwesomeIcon icon={faCalendarAlt} className="mr-1" />
-                                            <strong>Total Classes:</strong> {totalStrictClasses}
+                                            <strong>Total Classes:</strong> {totalClasses}
                                         </p>
                                         <p className="mt-2">
                                             <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
                                             <strong>Attended:</strong> {strictPresent}
+                                        </p>
+                                        <p className="mt-2">
+                                            <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
+                                            <strong>Absent:</strong> {absentClasses}
                                         </p>
                                         <p className="mt-2">
                                             <FontAwesomeIcon icon={faChartLine} className="mr-1" />
@@ -454,7 +462,7 @@ const DashboardPage = () => {
                                                 </p>
                                                 <p className="mt-2">
                                                     <FontAwesomeIcon icon={faChartLine} className="mr-1" />
-                                                    <strong>Adjusted Attendance:</strong> {calculatePercentage(adjustedPresent, totalRelaxedClasses)}
+                                                    <strong>Adjusted Attendance:</strong> {calculatePercentage(adjustedPresent, totalClasses)}
                                                 </p>
                                             </>
                                         )}

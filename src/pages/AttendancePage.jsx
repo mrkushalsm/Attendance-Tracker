@@ -18,7 +18,7 @@ const AttendancePage = () => {
     const [subjects, setSubjects] = useState([]);
     const [newSubject, setNewSubject] = useState("");
 
-    const getToday = () => new Date().toISOString().split("T")[0];
+    const getToday = () => new Date().toLocaleDateString("en-CA");
 
     useEffect(() => {
         const fetchSubjects = async () => {
