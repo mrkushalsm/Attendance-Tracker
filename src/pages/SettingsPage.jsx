@@ -29,42 +29,11 @@ const SettingsPage = () => {
         fetchEndTime();
     }, []);
 
-    // Request Notification Permission when the component mounts
-    useEffect(() => {
-        if (Notification.permission !== "granted") {
-            Notification.requestPermission().then((permission) => {
-                if (permission !== "granted") {
-                    console.warn("❌ Notifications are blocked by the user.");
-                }
-            });
-        }
-    }, []);
-
-    // Save end time to IndexedDB & Schedule Notification
+    // Save end time to IndexedDB
     const saveEndTime = async () => {
         try {
             await db.settings.put({ id: "collegeEndTime", value: endTime });
             alert("✅ College end time saved!");
-
-            // Convert time to Date object
-            const [hours, minutes] = endTime.split(":").map(Number);
-            const collegeEndDate = new Date();
-            collegeEndDate.setHours(hours, minutes, 0, 0);
-
-            // Set reminder time (2 hours later)
-            const reminderTime = new Date(collegeEndDate.getTime() + 2 * 60 * 60 * 1000);
-            const delay = reminderTime.getTime() - Date.now();
-
-            if (delay > 0) {
-                setTimeout(() => {
-                    if (Notification.permission === "granted") {
-                        new Notification("📌 Attendance Reminder", {
-                            body: "Don't forget to mark your attendance!",
-                            icon: "/icon.png", // Optional icon
-                        });
-                    }
-                }, delay);
-            }
         } catch (error) {
             console.error("Error saving college end time:", error);
             alert("❌ Failed to save college end time.");
@@ -72,35 +41,49 @@ const SettingsPage = () => {
     };
 
     return (
-        <div className="p-6 max-w-md mx-auto text-center">
+        <div className="min-h-screen flex flex-col items-center justify-center p-6">
             {/* Back Button */}
-            <button onClick={() => navigate(-1)} className="btn btn-ghost btn-circle absolute left-4 top-4">
+            <button
+                onClick={() => navigate(-1)}
+                className="btn btn-ghost btn-circle absolute left-4 top-4 hover:bg-gray-200 dark:hover:bg-gray-800"
+            >
                 <FontAwesomeIcon icon={faArrowLeft} className="text-xl" />
             </button>
 
-            <h1 className="text-2xl font-bold">⚙️ Settings</h1>
+            <h1 className="text-3xl font-bold mb-8">⚙️ Settings</h1>
 
-            {/* Theme Toggle */}
-            <button onClick={() => setTheme(theme === "emerald" ? "business" : "emerald")} className="btn btn-primary mt-10">
-                <FontAwesomeIcon icon={theme === "emerald" ? faSun : faMoon} />
-                Display mode: {theme === "emerald" ? "Light" : "Dark"}
-            </button>
+            {/* Settings Container */}
+            <div className="w-full max-w-md p-6 bg-base-200 shadow-lg rounded-lg">
+                {/* Theme Toggle */}
+                <div className="mb-6 flex flex-col items-center">
+                    <button
+                        onClick={() => setTheme(theme === "emerald" ? "business" : "emerald")}
+                        className="btn btn-primary w-full"
+                    >
+                        <FontAwesomeIcon icon={theme === "emerald" ? faSun : faMoon} className="mr-2" />
+                        {theme === "emerald" ? "Switch to Dark Mode" : "Switch to Light Mode"}
+                    </button>
+                </div>
 
-            {/* College End Time Input */}
-            <div className="mt-10 m-5">
-                <label className="block font-semibold">
-                    <FontAwesomeIcon icon={faClock} className="mr-2" />
-                    College End Time
-                </label>
-                <input
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="input input-bordered w-full max-w-xs mt-2"
-                />
-                <button onClick={saveEndTime} className="btn btn-success mt-2">
-                    Save
-                </button>
+                {/* College End Time Input */}
+                <div className="mt-4">
+                    <label className="block font-semibold mb-2">
+                        <FontAwesomeIcon icon={faClock} className="mr-2" />
+                        College End Time
+                    </label>
+                    <input
+                        type="time"
+                        value={endTime}
+                        onChange={(e) => setEndTime(e.target.value)}
+                        className="input input-bordered w-full"
+                    />
+                    <button
+                        onClick={saveEndTime}
+                        className="btn btn-success w-full mt-3"
+                    >
+                        Save
+                    </button>
+                </div>
             </div>
         </div>
     );
