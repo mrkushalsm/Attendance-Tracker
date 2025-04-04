@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faSun, faMoon, faClock, faFileImport, faFileExport } from "@fortawesome/free-solid-svg-icons";
 import { db } from "../database/db";
+import { extractTextFromImage } from "../api/geminiApi";
+import TimetablePreview from "../components/TimetablePreview";
 
 const SettingsPage = () => {
     const navigate = useNavigate();
@@ -10,6 +12,8 @@ const SettingsPage = () => {
     const [endTime, setEndTime] = useState("");
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [importData, setImportData] = useState(null);
+    const [extractedTimetable, setExtractedTimetable] = useState(null);
+    const [previewSubjects, setPreviewSubjects] = useState(null);
 
     useEffect(() => {
         document.documentElement.setAttribute("data-theme", theme);
@@ -117,6 +121,26 @@ const SettingsPage = () => {
         }
     };
 
+    const handleTimetableUpload = async (event) => {
+        if (!event.target.files.length) return;
+        const file = event.target.files[0];
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = async () => {
+            const base64Image = reader.result.split(",")[1];
+            const extractedData = await extractTextFromImage(base64Image);
+
+            if (!extractedData) {
+                alert("❌ Failed to extract data.");
+                return;
+            }
+
+            console.log("Extracted Timetable JSON:", extractedData);
+            setExtractedTimetable(extractedData);
+        };
+    };
+
     return (
         <div className="min-h-screen flex flex-col items-center justify-center p-6">
             {/* Back Button */}
@@ -134,6 +158,16 @@ const SettingsPage = () => {
                         {theme === "emerald" ? "Switch to Dark Mode" : "Switch to Light Mode"}
                     </button>
                 </div>
+
+                {previewSubjects && (
+                    <TimetablePreview extractedTimetable={extractedTimetable} />
+                )}
+
+                {/* 📤 Upload Timetable */}
+                <label className="btn btn-outline w-full mt-2 cursor-pointer">
+                    📄 Upload Timetable
+                    <input type="file" accept="image/*" className="hidden" onChange={handleTimetableUpload} />
+                </label>
 
                 {/* College End Time Input */}
                 <div className="mt-4">
