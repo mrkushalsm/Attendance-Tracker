@@ -89,7 +89,11 @@ src/
    2. Run with PWA Service Worker
         ```bash
       npm install -g serve
+      ```
+      ```bash
       npm run build
+      ```
+      ```bash
       npx serve -s dist
       ```
 
