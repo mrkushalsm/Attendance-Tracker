@@ -99,6 +99,17 @@ src/
 
 ---
 
+## ⏯️ Demo
+
+Try out the app instantly!
+Click the link below to open it in your browser — you can even install it as a PWA for a full app-like experience:
+
+👉 [Launch Attendance Tracker](https://mrkushalsm-attendance-tracker.vercel.app/)
+
+Works offline, mobile-friendly, and ready to track your classes right away!
+
+---
+
 ## 📌 Roadmap
 
 - [x] Attendance dashboard
