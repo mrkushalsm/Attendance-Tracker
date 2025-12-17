@@ -117,6 +117,8 @@ const SettingsPage = () => {
         }
     };
 
+
+
     return (
         <div className="min-h-screen flex flex-col items-center justify-center p-6">
             {/* Back Button */}
@@ -142,8 +144,9 @@ const SettingsPage = () => {
                         College End Time
                     </label>
                     <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="input input-bordered w-full" />
-                    <button onClick={saveEndTime} className="btn btn-success w-full mt-3">Save</button>
                 </div>
+
+
 
                 {/* Import & Export Section */}
                 <div className="mt-6">

@@ -11,114 +11,129 @@ import {
     faCalendarAlt,
     faArrowLeft,
     faPlusSquare,
-    faRefresh
+    faTrash
 } from "@fortawesome/free-solid-svg-icons";
 
 const AttendancePage = () => {
     const [subjects, setSubjects] = useState([]);
     const [newSubject, setNewSubject] = useState("");
+    const [todaySessions, setTodaySessions] = useState({});
 
     const getToday = () => new Date().toLocaleDateString("en-CA");
 
     useEffect(() => {
-        const fetchSubjects = async () => {
-            const storedSubjects = await db.subjects.toArray();
-            setSubjects(storedSubjects.map(subject => {
-                const todayAttendance = subject.attendanceRecords?.find(a => a.date === getToday());
-                return {
-                    ...subject,
-                    attendance: todayAttendance ? todayAttendance.status : null
-                };
-            }));
-        };
         fetchSubjects();
     }, []);
+
+    const fetchSubjects = async () => {
+        const storedSubjects = await db.subjects.toArray();
+        const initialSessions = {};
+        
+        // Initialize sessions for each subject
+        storedSubjects.forEach(subject => {
+             const todayRecords = subject.attendanceRecords?.filter(a => a.date === getToday()) || [];
+             // If records exist, use them. If not, start with one empty session.
+             initialSessions[subject.id] = todayRecords.length > 0 
+                ? todayRecords.map(r => ({ ...r, timestamp: r.timestamp || Date.now() })) // Ensure timestamp exists
+                : [{ timestamp: Date.now(), status: null, date: getToday() }];
+        });
+
+        setSubjects(storedSubjects);
+        setTodaySessions(initialSessions);
+    };
 
     const addSubject = async () => {
         if (newSubject.trim() !== "" && !subjects.some((s) => s.name === newSubject)) {
             const id = await db.subjects.add({ name: newSubject, attendanceRecords: [], totalStrictClasses: 0, totalRelaxedClasses: 0 });
             setSubjects([...subjects, { id, name: newSubject, attendanceRecords: [], attendance: null }]);
+            setTodaySessions(prev => ({ ...prev, [id]: [{ timestamp: Date.now(), status: null, date: getToday() }] }));
             setNewSubject("");
         }
     };
 
-    const markAttendance = async (id, status) => {
-        const subject = await db.subjects.get(id);
-        const today = getToday();
-        const existingRecord = subject.attendanceRecords?.find(a => a.date === today);
+    const addSession = (subjectId) => {
+        setTodaySessions(prev => ({
+            ...prev,
+            [subjectId]: [...prev[subjectId], { timestamp: Date.now(), status: null, date: getToday() }]
+        }));
+    };
 
+    const removeSession = async (subjectId, sessionTimestamp) => {
+        const sessionToRemove = todaySessions[subjectId].find(s => s.timestamp === sessionTimestamp);
+        
+        // Remove from local state
+        const updatedSessions = todaySessions[subjectId].filter(s => s.timestamp !== sessionTimestamp);
+        setTodaySessions(prev => ({ ...prev, [subjectId]: updatedSessions }));
+
+        // If it was a saved record, update DB
+        if (sessionToRemove?.status) {
+             const subject = await db.subjects.get(subjectId);
+             
+             // Recalculate totals
+             let newStrictTotal = subject.totalStrictClasses;
+             let newRelaxedTotal = subject.totalRelaxedClasses;
+
+             if (["Present", "Absent"].includes(sessionToRemove.status)) newStrictTotal--;
+             if (["Excused", "Sick Leave"].includes(sessionToRemove.status)) newRelaxedTotal--;
+
+             const updatedRecords = subject.attendanceRecords.filter(r => r.timestamp !== sessionTimestamp && (r.date !== sessionToRemove.date || r.status !== sessionToRemove.status)); // Fallback filter if timestamp missing in old records
+             
+             await db.subjects.update(subjectId, {
+                 attendanceRecords: updatedRecords,
+                 totalStrictClasses: Math.max(0, newStrictTotal),
+                 totalRelaxedClasses: Math.max(0, newRelaxedTotal)
+             });
+             
+             fetchSubjects(); // Refresh to ensure sync
+        }
+    };
+
+    const markSession = async (subjectId, sessionTimestamp, status) => {
+        const subject = await db.subjects.get(subjectId);
+        const currentSessions = todaySessions[subjectId];
+        const sessionIndex = currentSessions.findIndex(s => s.timestamp === sessionTimestamp);
+        const oldSession = currentSessions[sessionIndex];
+
+        // Optimistic UI Update
+        const updatedSession = { ...oldSession, status, date: getToday(), timestamp: sessionTimestamp };
+        const newSessions = [...currentSessions];
+        newSessions[sessionIndex] = updatedSession;
+        
+        setTodaySessions(prev => ({ ...prev, [subjectId]: newSessions }));
+
+        // DB Update Logic
         let newStrictTotal = subject.totalStrictClasses || 0;
         let newRelaxedTotal = subject.totalRelaxedClasses || 0;
+        let updatedRecords = subject.attendanceRecords || [];
 
-        if (existingRecord) {
-            if (existingRecord.status === status) return; // No change needed
+        // If updating an existing saved record (has status previously)
+        if (oldSession.status) {
+             if (oldSession.status === status) return; // No change
 
-            // Adjust totals when changing attendance status
-            if (["Present", "Absent"].includes(existingRecord.status) && ["Excused", "Sick Leave"].includes(status)) {
-                newStrictTotal--;
-                newRelaxedTotal++;
-            } else if (["Excused", "Sick Leave"].includes(existingRecord.status) && ["Present", "Absent"].includes(status)) {
-                newStrictTotal++;
-                newRelaxedTotal--;
-            }
-
-            const updatedRecords = subject.attendanceRecords.map(a =>
-                a.date === today ? { ...a, status } : a
-            );
-
-            await db.subjects.update(id, { attendanceRecords: updatedRecords, totalStrictClasses: newStrictTotal, totalRelaxedClasses: newRelaxedTotal });
-
+             // Revert old counts
+             if (["Present", "Absent"].includes(oldSession.status)) newStrictTotal--;
+             if (["Excused", "Sick Leave"].includes(oldSession.status)) newRelaxedTotal--;
+             
+             // Update record in array
+             updatedRecords = updatedRecords.map(r => r.timestamp === sessionTimestamp ? updatedSession : r);
         } else {
-            if (["Present", "Absent"].includes(status)) {
-                newStrictTotal++;
-            } else if (["Excused", "Sick Leave"].includes(status)) {
-                newRelaxedTotal++;
-            }
-
-            const updatedRecords = [...(subject.attendanceRecords || []), { date: today, status }];
-
-            await db.subjects.update(id, {
-                attendanceRecords: updatedRecords,
-                totalStrictClasses: newStrictTotal,
-                totalRelaxedClasses: newRelaxedTotal
-            });
+             // New record
+             updatedRecords.push(updatedSession);
         }
 
-        setSubjects(subjects.map(s => s.id === id ? { ...s, attendance: status } : s));
+        // Add new counts
+        if (["Present", "Absent"].includes(status)) newStrictTotal++;
+        if (["Excused", "Sick Leave"].includes(status)) newRelaxedTotal++;
+
+        await db.subjects.update(subjectId, {
+            attendanceRecords: updatedRecords,
+            totalStrictClasses: newStrictTotal,
+            totalRelaxedClasses: newRelaxedTotal
+        });
+        
+        // Reload to ensure consistency (e.g. if we just saved a new record, it's now "saved")
+        // fetchSubjects(); // Optional, but good for data integrity
     };
-
-
-
-    const resetTodayAttendance = async () => {
-        const confirmed = window.confirm("Are you sure you want to reset today's attendance?");
-        if (!confirmed) return;
-
-        await Promise.all(subjects.map(async (subject) => {
-            const today = getToday();
-            const existingRecord = subject.attendanceRecords.find(a => a.date === today);
-
-            if (!existingRecord) return;
-
-            let newStrictTotal = subject.totalStrictClasses;
-            let newRelaxedTotal = subject.totalRelaxedClasses;
-
-            if (["Present", "Absent"].includes(existingRecord.status)) {
-                newStrictTotal--;
-            } else if (["Excused", "Sick Leave"].includes(existingRecord.status)) {
-                newRelaxedTotal--;
-            }
-
-            await db.subjects.update(subject.id, {
-                attendanceRecords: subject.attendanceRecords.filter(a => a.date !== today),
-                totalStrictClasses: Math.max(0, newStrictTotal),
-                totalRelaxedClasses: Math.max(0, newRelaxedTotal)
-            });
-        }));
-
-        setSubjects(subjects.map(s => ({ ...s, attendance: null })));
-        toast.success("Today's attendance has been reset!");
-    };
-
 
     return (
         <div className="flex flex-col p-4 sm:p-6 space-y-6 max-w-lg mx-auto">
@@ -143,37 +158,49 @@ const AttendancePage = () => {
                 </button>
             </div>
 
-            {subjects.length > 0 && (
-                <button onClick={resetTodayAttendance} className="btn btn-warning w-full">
-                    <FontAwesomeIcon className="mr-1 mt-0.5" icon={faRefresh} /> Reset Today's Attendance
-                </button>
-            )}
-
-            <div className="space-y-4">
+            <div className="space-y-6">
                 {subjects.length === 0 ? (
                     <p className="text-gray-500 text-center">No subjects added yet.</p>
                 ) : (
-                    subjects.map(({ id, name, attendance }) => (
-                        <div key={id} className="flex flex-col sm:flex-row justify-between items-center p-4 bg-base-200 rounded-lg shadow">
-                            <span className="text-lg font-semibold">{name}</span>
-                            <div className="flex flex-wrap gap-2 mt-2 sm:mt-0 p-4">
-                                <button onClick={() => markAttendance(id, "Present")}
-                                        className={`btn h-12 w-13 ${attendance === "Present" ? "btn-success" : "btn-outline"}`}>
-                                    <FontAwesomeIcon icon={faCheck} />
-                                </button>
-                                <button onClick={() => markAttendance(id, "Absent")}
-                                        className={`btn h-12 w-13 ${attendance === "Absent" ? "btn-error" : "btn-outline"}`}>
-                                    <FontAwesomeIcon icon={faTimes} />
-                                </button>
-                                <button onClick={() => markAttendance(id, "Excused")}
-                                        className={`btn h-12 w-13 ${attendance === "Excused" ? "btn-info" : "btn-outline"}`}>
-                                    <FontAwesomeIcon icon={faLightbulb} />
-                                </button>
-                                <button onClick={() => markAttendance(id, "Sick Leave")}
-                                        className={`btn h-12 w-13 ${attendance === "Sick Leave" ? "btn-secondary" : "btn-outline"}`}>
-                                    <FontAwesomeIcon icon={faFrown} />
-                                </button>
+                    subjects.map((subject) => (
+                        <div key={subject.id} className="p-4 bg-base-200 rounded-lg shadow">
+                            <h2 className="text-xl font-semibold text-center mb-4">{subject.name}</h2>
+                            
+                            <div className="space-y-3">
+                                {todaySessions[subject.id]?.map((session, index) => (
+                                    <div key={session.timestamp} className="flex flex-wrap items-center gap-2 justify-center p-2 bg-base-100 rounded-md">
+                                        <div className="flex gap-2">
+                                            <button onClick={() => markSession(subject.id, session.timestamp, "Present")}
+                                                    className={`btn btn-sm ${session.status === "Present" ? "btn-success" : "btn-outline"}`}>
+                                                <FontAwesomeIcon icon={faCheck} />
+                                            </button>
+                                            <button onClick={() => markSession(subject.id, session.timestamp, "Absent")}
+                                                    className={`btn btn-sm ${session.status === "Absent" ? "btn-error" : "btn-outline"}`}>
+                                                <FontAwesomeIcon icon={faTimes} />
+                                            </button>
+                                            <button onClick={() => markSession(subject.id, session.timestamp, "Excused")}
+                                                    className={`btn btn-sm ${session.status === "Excused" ? "btn-info" : "btn-outline"}`}>
+                                                <FontAwesomeIcon icon={faLightbulb} />
+                                            </button>
+                                            <button onClick={() => markSession(subject.id, session.timestamp, "Sick Leave")}
+                                                    className={`btn btn-sm ${session.status === "Sick Leave" ? "btn-secondary" : "btn-outline"}`}>
+                                                <FontAwesomeIcon icon={faFrown} />
+                                            </button>
+                                        </div>
+                                        
+                                        {/* Delete Button (Only show if there's more than 1 session OR this one is already saved to allow reset) */}
+                                        <button onClick={() => removeSession(subject.id, session.timestamp)} 
+                                                className="btn btn-ghost btn-xs text-error" 
+                                                title="Remove this session">
+                                            <FontAwesomeIcon icon={faTrash} />
+                                        </button>
+                                    </div>
+                                ))}
                             </div>
+
+                            <button onClick={() => addSession(subject.id)} className="btn btn-ghost btn-sm w-full mt-3 border-dashed border-2 border-base-content/20">
+                                <FontAwesomeIcon icon={faPlusSquare} /> Add Class
+                            </button>
                         </div>
                     ))
                 )}

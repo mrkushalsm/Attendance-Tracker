@@ -324,10 +324,15 @@ const DashboardPage = () => {
             let dataEntry = { date };
 
             subjects.forEach(subject => {
-                const record = subject.attendanceRecords?.find(a => a.date === date);
-                if (record && ["Present", "Excused", "Sick Leave"].includes(record.status)) {
-                    cumulativeAttendance[subject.name] += 1;
-                }
+                // Get all records for this date (support multiple classes per day)
+                const records = subject.attendanceRecords?.filter(a => a.date === date) || [];
+                
+                records.forEach(record => {
+                    if (["Present", "Excused", "Sick Leave"].includes(record.status)) {
+                        cumulativeAttendance[subject.name] += 1;
+                    }
+                });
+                
                 dataEntry[subject.name] = cumulativeAttendance[subject.name];
             });
 
