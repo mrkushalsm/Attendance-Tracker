@@ -11,8 +11,7 @@ export default defineConfig({
       srcDir: 'public',
       filename: 'sw.js',
       injectManifest: {
-        swSrc: 'public/sw.js',     // input file
-        swDest: 'public/sw.js',    // output file (same as input is OK *if* __WB_MANIFEST is present)
+        swSrc: 'public/sw.js',
         globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}'],
       },
       registerType: 'autoUpdate',

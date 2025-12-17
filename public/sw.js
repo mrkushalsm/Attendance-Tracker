@@ -1,4 +1,6 @@
-// public/sw.js
+import { precacheAndRoute } from 'workbox-precaching'
+
+precacheAndRoute(self.__WB_MANIFEST)
 
 self.addEventListener("notificationclick", (event) => {
     event.notification.close();
@@ -11,7 +13,7 @@ self.addEventListener("notificationclick", (event) => {
         setTimeout(() => {
             self.registration.showNotification("⏳ Reminder (Snoozed)", {
                 body: "Time to fill your attendance!",
-                icon: "/icons/reminder.png",
+                icon: "/attendance-tracker.png",
                 actions: [
                     { action: "open", title: "Open Attendance" },
                     { action: "snooze", title: "Snooze (1 Hour)" },
@@ -22,6 +24,3 @@ self.addEventListener("notificationclick", (event) => {
         }, 60 * 60 * 1000);
     }
 });
-
-// 💥 Workbox will inject cached asset list here
-self.__WB_MANIFEST;
