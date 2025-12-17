@@ -248,30 +248,31 @@ const DashboardPage = () => {
     };
 
     return (
-        <div className="p-4 sm:p-6 flex flex-col items-center justify-center min-h-screen bg-base-100 text-base-content">
+        <div className="p-4 sm:p-8 flex flex-col items-center min-h-screen bg-base-100 text-base-content">
             {/* Header */}
-            <div className="w-full max-w-md flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">
+            <div className="w-full max-w-6xl flex justify-between items-center mb-8">
+                <h1 className="text-3xl font-bold">
                     <FontAwesomeIcon icon={faThumbTack} className="mr-2 text-primary" /> Dashboard
                 </h1>
-                <Link to="/settings" className="btn btn-ghost btn-sm btn-circle">
-                   {/* Placeholder for settings icon if needed */}
+                <Link to="/settings" className="btn btn-ghost btn-circle">
+                   {/* Settings Icon placeholder or actual link */}
+                   <FontAwesomeIcon icon={faThumbTack} className="opacity-0" /> {/* Hidden spacer or icon */}
                 </Link>
             </div>
 
-            <div className="w-full max-w-md space-y-8">
+            <div className="w-full max-w-6xl space-y-8">
                 
-                {/* Critical Warning Card - Only shows if action needed */}
+                {/* Critical Warning Card - Centered max width */}
                 {lowAttendanceList.length > 0 && (
-                    <div className="card bg-base-200 border-l-4 border-error shadow-md">
-                        <div className="card-body p-4">
-                            <h3 className="text-lg font-bold text-error flex items-center mb-2">
+                    <div className="card bg-base-200 border-l-4 border-error shadow-md max-w-3xl mx-auto w-full">
+                        <div className="card-body p-6">
+                            <h3 className="text-xl font-bold text-error flex items-center mb-2">
                                 <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
                                 Action Needed
                             </h3>
-                            <div className="text-sm text-base-content/80">
+                            <div className="text-base text-base-content/80">
                                 <span className="font-semibold text-error">{lowAttendanceList.length} Subject{lowAttendanceList.length > 1 ? 's' : ''}</span> below 75%.
-                                <ul className="list-disc list-inside mt-1 ml-1 opacity-80">
+                                <ul className="list-disc list-inside mt-2 ml-2 opacity-80 grid grid-cols-1 sm:grid-cols-2 gap-x-4">
                                     {lowAttendanceList.map((sub, i) => (
                                         <li key={i}>{sub.name} ({sub.percentage}%)</li>
                                     ))}
@@ -281,29 +282,29 @@ const DashboardPage = () => {
                     </div>
                 )}
 
-                {/* Your Subjects List */}
+                {/* Your Subjects List - Responsive Grid */}
                 <div>
-                     <h2 className="text-lg font-semibold mb-3 px-1 text-gray-500 uppercase tracking-wider text-xs">
+                     <h2 className="text-lg font-semibold mb-4 px-1 text-gray-500 uppercase tracking-wider text-xs">
                         Your Subjects
                     </h2>
                     {subjects.length === 0 ? (
-                        <p className="text-gray-500 text-center py-6">No subjects found. Add some in Settings!</p>
+                        <p className="text-gray-500 text-center py-10 text-xl">No subjects found. Add some in Settings!</p>
                     ) : (
-                        <div className="grid grid-cols-1 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {subjects.map(({ id, name, attendanceRecords, totalStrictClasses, totalRelaxedClasses }) => {
                                 const strictPresent = attendanceRecords?.filter((a) => a.status === "Present").length || 0;
                                 const pct = totalStrictClasses > 0 ? (strictPresent / totalStrictClasses) * 100 : 0;
                                 const isLow = pct < 75 && totalStrictClasses > 0;
                                 
                                 return (
-                                    <div key={id} className={`collapse collapse-arrow bg-base-200 border ${isLow ? 'border-red-200 dark:border-red-900/50' : 'border-base-300'} shadow-sm rounded-lg`}>
+                                    <div key={id} className={`collapse collapse-arrow bg-base-200 border ${isLow ? 'border-red-200 dark:border-red-900/50' : 'border-base-300'} shadow-sm rounded-2xl h-fit`}>
                                         <input type="checkbox" /> 
-                                        <div className="collapse-title flex justify-between items-center pr-10">
-                                            <div className="flex flex-col">
-                                                <span className="font-semibold text-base sm:text-lg">{name}</span>
+                                        <div className="collapse-title flex justify-between items-center pr-10 py-4">
+                                            <div className="flex flex-col truncate pr-2">
+                                                <span className="font-semibold text-lg truncate" title={name}>{name}</span>
                                             </div>
                                             
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 shrink-0">
                                                 {/* History Button */}
                                                 <Link 
                                                     to={`/history/${id}`} 
@@ -313,10 +314,12 @@ const DashboardPage = () => {
                                                     <FontAwesomeIcon icon={faHistory} className="text-base" />
                                                 </Link>
 
-                                                {/* Insight Badge */}
-                                                {getInsightBadge(strictPresent, 0, totalStrictClasses)}
+                                                {/* Insight Badge - Hide on very small screens if crowded, or keep logic simple */}
+                                                <div className="hidden sm:block">
+                                                    {getInsightBadge(strictPresent, 0, totalStrictClasses)}
+                                                </div>
 
-                                                <span className={`font-bold ml-1 text-lg ${
+                                                <span className={`font-bold ml-1 text-xl ${
                                                     isLow ? 'text-red-500 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
                                                 }`}>
                                                     {calculatePercentage(strictPresent, totalStrictClasses)}
@@ -348,15 +351,12 @@ const DashboardPage = () => {
                                                 <div className="mt-4 pt-3 border-t border-base-200 dark:border-base-300">
                                                     <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Detailed Breakdown</h4>
                                                     <div className="grid grid-cols-2 gap-4">
-                                                        {/* Physical Presence: Actual Present / (Strict + Relaxed) */}
+                                                        {/* Physical Presence */}
                                                         <div className="flex flex-col gap-1">
                                                             <div className="flex justify-between text-xs">
-                                                                <span className="text-base-content/70">Strict (Physical)</span>
+                                                                <span className="text-base-content/70">Strict</span>
                                                                 <span className="font-bold">
                                                                     {((strictPresent / (totalStrictClasses + totalRelaxedClasses)) * 100).toFixed(0)}%
-                                                                    <span className="text-[10px] font-normal text-gray-400 ml-1">
-                                                                        ({strictPresent}/{totalStrictClasses + totalRelaxedClasses})
-                                                                    </span>
                                                                 </span>
                                                             </div>
                                                             <progress 
@@ -366,15 +366,12 @@ const DashboardPage = () => {
                                                             </progress>
                                                         </div>
 
-                                                        {/* Medical/Credited: (Present + Relaxed) / (Strict + Relaxed) */}
+                                                        {/* Medical/Credited */}
                                                         <div className="flex flex-col gap-1">
                                                             <div className="flex justify-between text-xs">
-                                                                <span className="text-base-content/70">Credited (Medical)</span>
+                                                                <span className="text-base-content/70">Credited</span>
                                                                 <span className="font-bold">
                                                                     {(((strictPresent + totalRelaxedClasses) / (totalStrictClasses + totalRelaxedClasses)) * 100).toFixed(0)}%
-                                                                    <span className="text-[10px] font-normal text-gray-400 ml-1">
-                                                                        ({strictPresent + totalRelaxedClasses}/{totalStrictClasses + totalRelaxedClasses})
-                                                                    </span>
                                                                 </span>
                                                             </div>
                                                             <progress 
@@ -394,10 +391,12 @@ const DashboardPage = () => {
                     )}
                 </div>
 
-                {/* Mark Attendance CTA */}
-                <Link to="/attendance" className="btn btn-primary w-full shadow-xl shadow-primary/20 text-xl font-bold h-16 rounded-2xl flex items-center justify-center gap-3">
-                    <FontAwesomeIcon icon={faArrowRight} /> Mark Attendance
-                </Link>
+                {/* Mark Attendance CTA - Centered and constrained */}
+                <div className="max-w-md mx-auto w-full">
+                    <Link to="/attendance" className="btn btn-primary w-full shadow-xl shadow-primary/20 text-xl font-bold h-16 rounded-2xl flex items-center justify-center gap-3">
+                        <FontAwesomeIcon icon={faArrowRight} /> Mark Attendance
+                    </Link>
+                </div>
                 
                 <div className="h-10"></div> {/* Spacer */}
             </div>

@@ -120,57 +120,64 @@ const SettingsPage = () => {
 
 
     return (
-        <div className="p-4 sm:p-6 flex flex-col items-center justify-center min-h-screen bg-base-100 text-base-content">
+        <div className="p-4 sm:p-8 flex flex-col items-center justify-center min-h-screen bg-base-100 text-base-content">
             {/* Header */}
-            <div className="w-full max-w-md flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">
+            <div className="w-full max-w-4xl flex justify-between items-center mb-8">
+                <h1 className="text-3xl font-bold">
                     ⚙️ Settings
                 </h1>
-                <button onClick={() => navigate(-1)} className="btn btn-ghost btn-sm btn-circle">
-                    <FontAwesomeIcon icon={faArrowLeft} />
+                <button onClick={() => navigate(-1)} className="btn btn-ghost btn-circle">
+                    <FontAwesomeIcon icon={faArrowLeft} className="text-xl" />
                 </button>
             </div>
 
-            <div className="w-full max-w-md space-y-4">
-                {/* Theme Card */}
-                <div className="bg-base-200 p-4 rounded-2xl shadow-sm">
-                    <h2 className="text-lg font-semibold mb-3 px-1">Appearance</h2>
-                    <button onClick={() => setTheme(theme === "emerald" ? "business" : "emerald")} 
-                            className="btn btn-primary w-full h-14 text-lg rounded-xl shadow-md">
-                        <FontAwesomeIcon icon={theme === "emerald" ? faSun : faMoon} className="mr-2" />
-                        {theme === "emerald" ? "Switch to Dark Mode" : "Switch to Light Mode"}
-                    </button>
-                </div>
+            <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                
+                {/* Column 1: Appearance & Preferences */}
+                <div className="space-y-6">
+                    {/* Theme Card */}
+                    <div className="bg-base-200 p-6 rounded-2xl shadow-sm">
+                        <h2 className="text-lg font-semibold mb-3 px-1">Appearance</h2>
+                        <button onClick={() => setTheme(theme === "emerald" ? "business" : "emerald")} 
+                                className="btn btn-primary w-full h-14 text-lg rounded-xl shadow-md">
+                            <FontAwesomeIcon icon={theme === "emerald" ? faSun : faMoon} className="mr-2" />
+                            {theme === "emerald" ? "Switch to Dark Mode" : "Switch to Light Mode"}
+                        </button>
+                    </div>
 
-                {/* College End Time Card */}
-                <div className="bg-base-200 p-4 rounded-2xl shadow-sm">
-                    <h2 className="text-lg font-semibold mb-3 px-1">Preferences</h2>
-                    <label className="block font-medium mb-2 opacity-80 px-1">
-                        <FontAwesomeIcon icon={faClock} className="mr-2" />
-                        College End Time
-                    </label>
-                    <div className="flex gap-2">
-                        <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} 
-                               className="input input-bordered h-12 w-full text-lg rounded-xl" />
-                        <button onClick={saveEndTime} className="btn btn-neutral h-12 px-6 rounded-xl">Save</button>
+                    {/* College End Time Card */}
+                    <div className="bg-base-200 p-6 rounded-2xl shadow-sm">
+                        <h2 className="text-lg font-semibold mb-3 px-1">Preferences</h2>
+                        <label className="block font-medium mb-2 opacity-80 px-1">
+                            <FontAwesomeIcon icon={faClock} className="mr-2" />
+                            College End Time
+                        </label>
+                        <div className="flex gap-2">
+                            <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} 
+                                   className="input input-bordered h-12 w-full text-lg rounded-xl" />
+                            <button onClick={saveEndTime} className="btn btn-neutral h-12 px-6 rounded-xl">Save</button>
+                        </div>
                     </div>
                 </div>
 
-                {/* Backup & Restore Card */}
-                <div className="bg-base-200 p-4 rounded-2xl shadow-sm">
+                {/* Column 2: Backup & Restore (Full Height if needed) */}
+                <div className="bg-base-200 p-6 rounded-2xl shadow-sm h-full">
                     <h2 className="text-lg font-bold mb-3 px-1">Backup & Restore</h2>
+                    <p className="text-sm opacity-60 mb-4 px-1">Safeguard your data or move it to another device.</p>
                     
-                    <div className="grid grid-cols-2 gap-3">
-                        <label className="btn btn-outline h-24 flex flex-col gap-2 rounded-xl border-base-content/20 bg-base-100 hover:bg-base-200 hover:border-base-content/40 cursor-pointer">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
+                        <label className="btn btn-outline h-32 flex flex-col gap-2 rounded-xl border-base-content/20 bg-base-100 hover:bg-base-200 hover:border-base-content/40 cursor-pointer">
                             <FontAwesomeIcon icon={faFileImport} className="text-3xl mb-1 text-primary" />
-                            <span className="text-sm font-normal">Import Data</span>
+                            <span className="text-base font-normal">Import Data</span>
+                            <div className="badge badge-sm badge-ghost font-normal">.JSON file</div>
                             <input type="file" accept=".json" className="hidden" onChange={handleImportFile} />
                         </label>
 
                         <button onClick={exportData} 
-                                className="btn btn-outline h-24 flex flex-col gap-2 rounded-xl border-base-content/20 bg-base-100 hover:bg-base-200 hover:border-base-content/40">
+                                className="btn btn-outline h-32 flex flex-col gap-2 rounded-xl border-base-content/20 bg-base-100 hover:bg-base-200 hover:border-base-content/40">
                             <FontAwesomeIcon icon={faFileExport} className="text-3xl mb-1 text-secondary" />
-                            <span className="text-sm font-normal">Export Data</span>
+                            <span className="text-base font-normal">Export Data</span>
+                            <div className="badge badge-sm badge-ghost font-normal">Download</div>
                         </button>
                     </div>
                 </div>

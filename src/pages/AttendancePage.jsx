@@ -136,21 +136,22 @@ const AttendancePage = () => {
     };
 
     return (
-        <div className="p-4 sm:p-6 flex flex-col items-center justify-center min-h-screen bg-base-100 text-base-content">
-            {/* Header */}
-             <div className="w-full max-w-md flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">
+    return (
+        <div className="p-4 sm:p-8 flex flex-col items-center min-h-screen bg-base-100 text-base-content">
+             {/* Header */}
+             <div className="w-full max-w-4xl flex justify-between items-center mb-8">
+                <h1 className="text-3xl font-bold">
                     <FontAwesomeIcon className="mr-2" icon={faCalendarAlt} /> Mark Attendance
                 </h1>
                 <Link to="/dashboard" className="btn btn-ghost btn-sm btn-circle">
-                    <FontAwesomeIcon icon={faArrowLeft} />
+                    <FontAwesomeIcon icon={faArrowLeft} className="text-xl" />
                 </Link>
             </div>
 
 
-            <div className="w-full max-w-md space-y-6">
-                {/* Add Subject Input */}
-                <div className="join w-full">
+            <div className="w-full max-w-4xl space-y-8">
+                {/* Add Subject Input - Max Width constrained for better look */}
+                <div className="join w-full max-w-lg mx-auto shadow-sm">
                     <input
                         type="text"
                         placeholder="Enter new subject..."
@@ -158,22 +159,22 @@ const AttendancePage = () => {
                         onChange={(e) => setNewSubject(e.target.value)}
                         className="input input-bordered join-item w-full"
                     />
-                    <button onClick={addSubject} className="btn btn-primary join-item">
-                        <FontAwesomeIcon icon={faPlusSquare} />
+                    <button onClick={addSubject} className="btn btn-primary join-item px-6">
+                        <FontAwesomeIcon icon={faPlusSquare} className="text-lg" />
                     </button>
                 </div>
 
-                {/* Subject List */}
-                <div className="space-y-4">
+                {/* Subject List - Responsive Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {subjects.length === 0 ? (
-                        <div className="text-center py-10 opacity-50 bg-base-200 rounded-2xl border border-base-300 border-dashed">
-                             <p>No subjects added yet.</p>
+                        <div className="col-span-full text-center py-10 opacity-50 bg-base-200 rounded-2xl border border-base-300 border-dashed">
+                             <p className="text-lg">No subjects added yet.</p>
                         </div>
                     ) : (
                         subjects.map((subject) => (
-                            <div key={subject.id} className="collapse collapse-arrow bg-base-200 shadow-sm rounded-lg">
+                            <div key={subject.id} className="collapse collapse-arrow bg-base-200 shadow-sm rounded-2xl h-fit">
                                 <input type="checkbox" defaultChecked /> 
-                                <div className="collapse-title text-lg font-semibold flex justify-between items-center">
+                                <div className="collapse-title text-lg font-semibold flex justify-between items-center py-4">
                                     {subject.name}
                                 </div>
                                 
