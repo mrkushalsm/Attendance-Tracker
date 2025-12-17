@@ -120,90 +120,88 @@ const SettingsPage = () => {
 
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-6">
-            {/* Back Button */}
-            <button onClick={() => navigate(-1)} className="btn btn-ghost btn-circle absolute left-4 top-4">
-                <FontAwesomeIcon icon={faArrowLeft} className="text-xl" />
-            </button>
+        <div className="p-4 sm:p-6 flex flex-col items-center min-h-screen bg-base-100 text-base-content">
+            {/* Header */}
+            <div className="w-full max-w-md flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold">
+                    ⚙️ Settings
+                </h1>
+                <button onClick={() => navigate(-1)} className="btn btn-ghost btn-sm btn-circle">
+                    <FontAwesomeIcon icon={faArrowLeft} />
+                </button>
+            </div>
 
-            <h1 className="text-3xl font-bold mb-8">⚙️ Settings</h1>
-
-            <div className="w-full max-w-md p-6 bg-base-200 shadow-lg rounded-lg">
-                {/* Theme Toggle */}
-                <div className="mb-6 flex flex-col items-center">
-                    <button onClick={() => setTheme(theme === "emerald" ? "business" : "emerald")} className="btn btn-primary w-full">
+            <div className="w-full max-w-md space-y-4">
+                {/* Theme Card */}
+                <div className="bg-base-200 p-4 rounded-2xl shadow-sm">
+                    <h2 className="text-lg font-semibold mb-3 px-1">Appearance</h2>
+                    <button onClick={() => setTheme(theme === "emerald" ? "business" : "emerald")} 
+                            className="btn btn-primary w-full h-14 text-lg rounded-xl shadow-md">
                         <FontAwesomeIcon icon={theme === "emerald" ? faSun : faMoon} className="mr-2" />
                         {theme === "emerald" ? "Switch to Dark Mode" : "Switch to Light Mode"}
                     </button>
                 </div>
 
-                {/* College End Time Input */}
-                <div className="mt-4">
-                    <label className="block font-semibold mb-2">
+                {/* College End Time Card */}
+                <div className="bg-base-200 p-4 rounded-2xl shadow-sm">
+                    <h2 className="text-lg font-semibold mb-3 px-1">Preferences</h2>
+                    <label className="block font-medium mb-2 opacity-80 px-1">
                         <FontAwesomeIcon icon={faClock} className="mr-2" />
                         College End Time
                     </label>
-                    <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="input input-bordered w-full" />
+                    <div className="flex gap-2">
+                        <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} 
+                               className="input input-bordered h-12 w-full text-lg rounded-xl" />
+                        <button onClick={saveEndTime} className="btn btn-neutral h-12 px-6 rounded-xl">Save</button>
+                    </div>
                 </div>
 
+                {/* Backup & Restore Card */}
+                <div className="bg-base-200 p-4 rounded-2xl shadow-sm">
+                    <h2 className="text-lg font-bold mb-3 px-1">Backup & Restore</h2>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                        <label className="btn btn-outline h-24 flex flex-col gap-2 rounded-xl border-base-content/20 bg-base-100 hover:bg-base-200 hover:border-base-content/40 cursor-pointer">
+                            <FontAwesomeIcon icon={faFileImport} className="text-3xl mb-1 text-primary" />
+                            <span className="text-sm font-normal">Import Data</span>
+                            <input type="file" accept=".json" className="hidden" onChange={handleImportFile} />
+                        </label>
 
-
-                {/* Import & Export Section */}
-                <div className="mt-6">
-                    <h2 className="text-lg font-bold">📂 Backup & Restore</h2>
-
-                    {/* Import */}
-                    <label className="btn btn-outline w-full mt-2 cursor-pointer">
-                        <FontAwesomeIcon icon={faFileImport} className="mr-2" />
-                        Import Data
-                        <input type="file" accept=".json" className="hidden" onChange={handleImportFile} />
-                    </label>
-
-                    {/* Export */}
-                    <button onClick={exportData} className="btn btn-outline w-full mt-2">
-                        <FontAwesomeIcon icon={faFileExport} className="mr-2" />
-                        Export Data
-                    </button>
+                        <button onClick={exportData} 
+                                className="btn btn-outline h-24 flex flex-col gap-2 rounded-xl border-base-content/20 bg-base-100 hover:bg-base-200 hover:border-base-content/40">
+                            <FontAwesomeIcon icon={faFileExport} className="text-3xl mb-1 text-secondary" />
+                            <span className="text-sm font-normal">Export Data</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* 📋 Preview Modal */}
             {isPreviewOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4">
-                    <div className="bg-base-200 p-6 rounded-lg shadow-lg max-w-3xl w-full">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
+                    <div className="bg-base-200 p-6 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
                         <h2 className="text-xl font-bold mb-4">📋 Edit Import Data</h2>
 
                         {/* Table with Editable Inputs */}
-                        <div className="overflow-auto max-h-80 border rounded bg-base-100">
-                            <table className="table w-full">
+                        <div className="overflow-auto flex-1 border rounded bg-base-100 p-2">
+                            <table className="table table-compact w-full">
                                 <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>📖 Subject</th>
-                                    <th>✅ Present</th>
-                                    <th>❌ Absent</th>
-                                    <th>🏥 Sick</th>
-                                    <th>🎓 Excused</th>
-                                    <th>📊 Strict</th>
-                                    <th>📊 Relaxed</th>
-                                    <th>📊 Total</th>
+                                    <th>Subject</th>
+                                    <th>Present</th>
+                                    <th>Absent</th>
+                                    <th>Sick</th>
+                                    <th>Excused</th>
                                 </tr>
                                 </thead>
                                 <tbody>
                                 {importData?.subjects?.map((subject, index) => {
-                                    // Count occurrences of each status
                                     const attendanceRecords = subject.attendanceRecords || [];
                                     const present = attendanceRecords.filter((record) => record.status === "Present").length;
                                     const absent = attendanceRecords.filter((record) => record.status === "Absent").length;
                                     const sick = attendanceRecords.filter((record) => record.status === "Sick Leave").length;
                                     const excused = attendanceRecords.filter((record) => record.status === "Excused").length;
-
-                                    // Calculate totals
-                                    const totalStrict = present + absent;
-                                    const totalRelaxed = excused + sick;
-                                    const totalClasses = totalStrict + totalRelaxed;
-
-                                    console.log(`Subject ${subject.name}: Present=${present}, Absent=${absent}, Sick=${sick}, Excused=${excused}`); // Debugging
 
                                     return (
                                         <tr key={index}>
@@ -213,44 +211,13 @@ const SettingsPage = () => {
                                                     type="text"
                                                     value={subject.name}
                                                     onChange={(e) => handleEditChange(index, "name", e.target.value)}
-                                                    className="input input-sm input-bordered w-full"
+                                                    className="input input-xs input-bordered w-full"
                                                 />
                                             </td>
-                                            <td>
-                                                <input
-                                                    type="number"
-                                                    value={present}
-                                                    readOnly
-                                                    className="input input-sm input-bordered w-16 text-center"
-                                                />
-                                            </td>
-                                            <td>
-                                                <input
-                                                    type="number"
-                                                    value={absent}
-                                                    readOnly
-                                                    className="input input-sm input-bordered w-16 text-center"
-                                                />
-                                            </td>
-                                            <td>
-                                                <input
-                                                    type="number"
-                                                    value={sick}
-                                                    readOnly
-                                                    className="input input-sm input-bordered w-16 text-center"
-                                                />
-                                            </td>
-                                            <td>
-                                                <input
-                                                    type="number"
-                                                    value={excused}
-                                                    readOnly
-                                                    className="input input-sm input-bordered w-16 text-center"
-                                                />
-                                            </td>
-                                            <td className="text-center font-bold">{totalStrict}</td>
-                                            <td className="text-center font-bold">{totalRelaxed}</td>
-                                            <td className="text-center font-bold">{totalClasses}</td>
+                                            <td>{present}</td>
+                                            <td>{absent}</td>
+                                            <td>{sick}</td>
+                                            <td>{excused}</td>
                                         </tr>
                                     );
                                 })}
@@ -259,15 +226,15 @@ const SettingsPage = () => {
                         </div>
 
                         {/* ✅ Buttons */}
-                        <div className="flex flex-wrap justify-center gap-2 mt-4">
-                            <button onClick={() => confirmImport("append")} className="btn btn-success">✅ Append</button>
-                            <button onClick={() => confirmImport("overwrite")} className="btn btn-warning">⚠️ Overwrite</button>
+                        <div className="flex flex-wrap justify-end gap-2 mt-4 pt-2 border-t border-base-content/10">
                             <button onClick={() => {
                                 setIsPreviewOpen(false);
                                 setImportData(null);
-                            }} className="btn btn-error">
-                                ❌ Cancel
+                            }} className="btn btn-sm btn-ghost">
+                                Cancel
                             </button>
+                            <button onClick={() => confirmImport("overwrite")} className="btn btn-sm btn-warning">Overwrite</button>
+                            <button onClick={() => confirmImport("append")} className="btn btn-sm btn-success">Append</button>
                         </div>
                     </div>
                 </div>

@@ -307,16 +307,16 @@ const DashboardPage = () => {
                                                 {/* History Button */}
                                                 <Link 
                                                     to={`/history/${id}`} 
-                                                    className="btn btn-ghost btn-circle btn-xs text-base-content/50 hover:text-primary z-50 mr-1"
+                                                    className="btn btn-ghost btn-sm btn-circle text-base-content/50 hover:text-primary z-50 mr-1"
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
-                                                    <FontAwesomeIcon icon={faHistory} />
+                                                    <FontAwesomeIcon icon={faHistory} className="text-base" />
                                                 </Link>
 
                                                 {/* Insight Badge */}
                                                 {getInsightBadge(strictPresent, 0, totalStrictClasses)}
 
-                                                <span className={`font-bold ml-1 ${
+                                                <span className={`font-bold ml-1 text-lg ${
                                                     isLow ? 'text-red-500 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
                                                 }`}>
                                                     {calculatePercentage(strictPresent, totalStrictClasses)}
@@ -325,21 +325,21 @@ const DashboardPage = () => {
                                         </div>
                                         <div className="collapse-content">
                                             <div className="grid grid-cols-4 gap-2 text-xs sm:text-sm mt-2 text-center">
-                                                <div className="p-2 bg-base-100 rounded flex flex-col">
-                                                    <span className="text-gray-400 dark:text-gray-500">Total</span> 
-                                                    <span className="font-bold">{totalStrictClasses}</span>
+                                                <div className="p-2 bg-base-100 rounded-lg flex flex-col">
+                                                    <span className="text-gray-400 dark:text-gray-500 text-[10px] uppercase font-bold">Total</span> 
+                                                    <span className="font-bold text-lg">{totalStrictClasses}</span>
                                                 </div>
-                                                <div className="p-2 bg-base-100 text-green-700 dark:text-green-300 rounded flex flex-col">
-                                                    <span className="opacity-75">Present</span> 
-                                                    <span className="font-bold">{strictPresent}</span>
+                                                <div className="p-2 bg-base-100 text-green-700 dark:text-green-300 rounded-lg flex flex-col">
+                                                    <span className="opacity-75 text-[10px] uppercase font-bold">Present</span> 
+                                                    <span className="font-bold text-lg">{strictPresent}</span>
                                                 </div>
-                                                <div className="p-2 bg-base-100 text-red-700 dark:text-red-300 rounded flex flex-col">
-                                                    <span className="opacity-75">Absent</span> 
-                                                    <span className="font-bold">{totalStrictClasses - strictPresent}</span>
+                                                <div className="p-2 bg-base-100 text-red-700 dark:text-red-300 rounded-lg flex flex-col">
+                                                    <span className="opacity-75 text-[10px] uppercase font-bold">Absent</span> 
+                                                    <span className="font-bold text-lg">{totalStrictClasses - strictPresent}</span>
                                                 </div>
-                                                <div className="p-2 bg-base-100 text-yellow-700 dark:text-yellow-300 rounded flex flex-col">
-                                                    <span className="opacity-75">Excused</span> 
-                                                    <span className="font-bold">{totalRelaxedClasses}</span>
+                                                <div className="p-2 bg-base-100 text-yellow-700 dark:text-yellow-300 rounded-lg flex flex-col">
+                                                    <span className="opacity-75 text-[10px] uppercase font-bold">Excused</span> 
+                                                    <span className="font-bold text-lg">{totalRelaxedClasses}</span>
                                                 </div>
                                             </div>
                                             
@@ -360,7 +360,7 @@ const DashboardPage = () => {
                                                                 </span>
                                                             </div>
                                                             <progress 
-                                                                className="progress progress-primary w-full" 
+                                                                className="progress progress-primary w-full h-2" 
                                                                 value={(strictPresent / (totalStrictClasses + totalRelaxedClasses)) * 100} 
                                                                 max="100">
                                                             </progress>
@@ -378,7 +378,7 @@ const DashboardPage = () => {
                                                                 </span>
                                                             </div>
                                                             <progress 
-                                                                className="progress progress-accent w-full" 
+                                                                className="progress progress-accent w-full h-2" 
                                                                 value={((strictPresent + totalRelaxedClasses) / (totalStrictClasses + totalRelaxedClasses)) * 100} 
                                                                 max="100">
                                                             </progress>
@@ -395,7 +395,7 @@ const DashboardPage = () => {
                 </div>
 
                 {/* Mark Attendance CTA */}
-                <Link to="/attendance" className="btn btn-primary w-full shadow-lg text-lg rounded-xl">
+                <Link to="/attendance" className="btn btn-primary w-full shadow-xl shadow-primary/20 text-xl font-bold h-16 rounded-2xl flex items-center justify-center gap-3">
                     <FontAwesomeIcon icon={faArrowRight} /> Mark Attendance
                 </Link>
                 

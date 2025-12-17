@@ -136,74 +136,93 @@ const AttendancePage = () => {
     };
 
     return (
-        <div className="flex flex-col p-4 sm:p-6 space-y-6 max-w-lg mx-auto">
-            <h1 className="text-2xl sm:text-3xl font-bold text-center">
-                <FontAwesomeIcon className="mr-2" icon={faCalendarAlt} /> Mark Attendance
-            </h1>
-
-            <Link to="/dashboard" className="btn btn-outline w-full sm:w-auto mt-10">
-                <FontAwesomeIcon className="mr-2" icon={faArrowLeft} /> Back to Dashboard
-            </Link>
-
-            <div className="flex flex-col sm:flex-row gap-2 mt-10">
-                <input
-                    type="text"
-                    placeholder="Enter subject name"
-                    value={newSubject}
-                    onChange={(e) => setNewSubject(e.target.value)}
-                    className="input input-bordered w-full"
-                />
-                <button onClick={addSubject} className="btn btn-primary">
-                    <FontAwesomeIcon className="mr-1 mt-0.5" icon={faPlusSquare} /> Add
-                </button>
+        <div className="p-4 sm:p-6 flex flex-col items-center min-h-screen bg-base-100 text-base-content">
+             {/* Header */}
+             <div className="w-full max-w-md flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold">
+                    <FontAwesomeIcon className="mr-2" icon={faCalendarAlt} /> Mark Attendance
+                </h1>
+                <Link to="/dashboard" className="btn btn-ghost btn-sm btn-circle">
+                    <FontAwesomeIcon icon={faArrowLeft} />
+                </Link>
             </div>
 
-            <div className="space-y-6">
-                {subjects.length === 0 ? (
-                    <p className="text-gray-500 text-center">No subjects added yet.</p>
-                ) : (
-                    subjects.map((subject) => (
-                        <div key={subject.id} className="p-4 bg-base-200 rounded-lg shadow">
-                            <h2 className="text-xl font-semibold text-center mb-4">{subject.name}</h2>
-                            
-                            <div className="space-y-3">
-                                {todaySessions[subject.id]?.map((session, index) => (
-                                    <div key={session.timestamp} className="flex flex-wrap items-center gap-2 justify-center p-2 bg-base-100 rounded-md">
-                                        <div className="flex gap-2">
-                                            <button onClick={() => markSession(subject.id, session.timestamp, "Present")}
-                                                    className={`btn btn-sm ${session.status === "Present" ? "btn-success" : "btn-outline"}`}>
-                                                <FontAwesomeIcon icon={faCheck} />
-                                            </button>
-                                            <button onClick={() => markSession(subject.id, session.timestamp, "Absent")}
-                                                    className={`btn btn-sm ${session.status === "Absent" ? "btn-error" : "btn-outline"}`}>
-                                                <FontAwesomeIcon icon={faTimes} />
-                                            </button>
-                                            <button onClick={() => markSession(subject.id, session.timestamp, "Excused")}
-                                                    className={`btn btn-sm ${session.status === "Excused" ? "btn-info" : "btn-outline"}`}>
-                                                <FontAwesomeIcon icon={faLightbulb} />
-                                            </button>
-                                            <button onClick={() => markSession(subject.id, session.timestamp, "Sick Leave")}
-                                                    className={`btn btn-sm ${session.status === "Sick Leave" ? "btn-secondary" : "btn-outline"}`}>
-                                                <FontAwesomeIcon icon={faFrown} />
-                                            </button>
-                                        </div>
-                                        
-                                        {/* Delete Button (Only show if there's more than 1 session OR this one is already saved to allow reset) */}
-                                        <button onClick={() => removeSession(subject.id, session.timestamp)} 
-                                                className="btn btn-ghost btn-xs text-error" 
-                                                title="Remove this session">
-                                            <FontAwesomeIcon icon={faTrash} />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
 
-                            <button onClick={() => addSession(subject.id)} className="btn btn-ghost btn-sm w-full mt-3 border-dashed border-2 border-base-content/20">
-                                <FontAwesomeIcon icon={faPlusSquare} /> Add Class
-                            </button>
+            <div className="w-full max-w-md space-y-6">
+                {/* Add Subject Input */}
+                <div className="join w-full">
+                    <input
+                        type="text"
+                        placeholder="Enter new subject..."
+                        value={newSubject}
+                        onChange={(e) => setNewSubject(e.target.value)}
+                        className="input input-bordered join-item w-full"
+                    />
+                    <button onClick={addSubject} className="btn btn-primary join-item">
+                        <FontAwesomeIcon icon={faPlusSquare} />
+                    </button>
+                </div>
+
+                {/* Subject List */}
+                <div className="space-y-4">
+                    {subjects.length === 0 ? (
+                        <div className="text-center py-10 opacity-50 bg-base-200 rounded-2xl border border-base-300 border-dashed">
+                             <p>No subjects added yet.</p>
                         </div>
-                    ))
-                )}
+                    ) : (
+                        subjects.map((subject) => (
+                            <div key={subject.id} className="collapse collapse-arrow bg-base-200 shadow-sm rounded-lg">
+                                <input type="checkbox" defaultChecked /> 
+                                <div className="collapse-title text-lg font-semibold flex justify-between items-center">
+                                    {subject.name}
+                                </div>
+                                
+                                <div className="collapse-content space-y-3">
+                                    {todaySessions[subject.id]?.map((session, index) => (
+                                        <div key={session.timestamp} className="p-3 bg-base-100 rounded-xl mb-3 border border-base-300">
+                                            {/* Status Buttons Grid */}
+                                            <div className="grid grid-cols-4 gap-3 mb-2">
+                                                <button onClick={() => markSession(subject.id, session.timestamp, "Present")}
+                                                        className={`btn h-12 text-lg rounded-xl shadow-sm ${session.status === "Present" ? "btn-success text-white" : "btn-outline border-base-content/20 bg-base-100 hover:bg-base-200"}`}>
+                                                    <FontAwesomeIcon icon={faCheck} />
+                                                </button>
+                                                <button onClick={() => markSession(subject.id, session.timestamp, "Absent")}
+                                                        className={`btn h-12 text-lg rounded-xl shadow-sm ${session.status === "Absent" ? "btn-error text-white" : "btn-outline border-base-content/20 bg-base-100 hover:bg-base-200"}`}>
+                                                    <FontAwesomeIcon icon={faTimes} />
+                                                </button>
+                                                <button onClick={() => markSession(subject.id, session.timestamp, "Excused")}
+                                                        className={`btn h-12 text-lg rounded-xl shadow-sm ${session.status === "Excused" ? "btn-info text-white" : "btn-outline border-base-content/20 bg-base-100 hover:bg-base-200"}`}>
+                                                    <FontAwesomeIcon icon={faLightbulb} />
+                                                </button>
+                                                <button onClick={() => markSession(subject.id, session.timestamp, "Sick Leave")}
+                                                        className={`btn h-12 text-lg rounded-xl shadow-sm ${session.status === "Sick Leave" ? "btn-secondary text-white" : "btn-outline border-base-content/20 bg-base-100 hover:bg-base-200"}`}>
+                                                    <FontAwesomeIcon icon={faFrown} />
+                                                </button>
+                                            </div>
+                                            
+                                            {/* Footer: Delete Action */}
+                                            <div className="flex justify-between items-center px-1">
+                                                <div className="text-xs text-base-content/40 font-mono">
+                                                    Session {index + 1}
+                                                </div>
+                                                <button onClick={() => removeSession(subject.id, session.timestamp)} 
+                                                        className="btn btn-ghost btn-xs text-error opacity-60 hover:opacity-100 hover:bg-error/10">
+                                                    <FontAwesomeIcon icon={faTrash} className="mr-1" /> Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    
+                                    <button onClick={() => addSession(subject.id)} className="btn btn-ghost btn-sm w-full border-dashed border-2 border-base-content/20 text-xs">
+                                        <FontAwesomeIcon icon={faPlusSquare} /> Split / Add Class
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+                
+                <div className="h-10"></div>
             </div>
         </div>
     );
