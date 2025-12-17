@@ -190,6 +190,7 @@ import {
     faArrowRight,
     faThumbTack,
     faExclamationTriangle,
+    faHistory
 } from "@fortawesome/free-solid-svg-icons";
 
 const DashboardPage = () => {
@@ -303,6 +304,15 @@ const DashboardPage = () => {
                                             </div>
                                             
                                             <div className="flex items-center gap-2">
+                                                {/* History Button */}
+                                                <Link 
+                                                    to={`/history/${id}`} 
+                                                    className="btn btn-ghost btn-circle btn-xs text-base-content/50 hover:text-primary z-50 mr-1"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <FontAwesomeIcon icon={faHistory} />
+                                                </Link>
+
                                                 {/* Insight Badge */}
                                                 {getInsightBadge(strictPresent, 0, totalStrictClasses)}
 

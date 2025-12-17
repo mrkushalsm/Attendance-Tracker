@@ -5,6 +5,7 @@ import Home from "./pages/Home";
 import Dashboard from "./pages/DashboardPage";
 import Attendance from "./pages/AttendancePage";
 import Settings from "./pages/SettingsPage";
+import SubjectHistoryPage from "./pages/SubjectHistoryPage";
 import FloatingSettingsButton from "./components/FloatingSettingsButton.jsx";
 
 const App = () => {
@@ -16,10 +17,9 @@ const App = () => {
 
             if (shouldNotify) {
                 console.log("✅ Reminder triggered!");
-                setShowReminder(true);
+                // Notification logic here if needed
             } else {
-                console.log("🚫 No reminder needed.");
-                console.log(shouldNotify)
+                 // console.log("🚫 No reminder needed.");
             }
         }, 10000); // Check every minute
 
@@ -27,10 +27,11 @@ const App = () => {
             console.log("🛑 Clearing interval...");
             clearInterval(interval);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
-        if (Notification.permission !== "granted") {
+        if ("Notification" in window && Notification.permission !== "granted") {
             Notification.requestPermission().then((permission) => {
                 if (permission !== "granted") {
                     console.warn("❌ Notifications denied by the user.");
@@ -38,10 +39,10 @@ const App = () => {
             });
         }
 
-        // Run reminder check every 30 seconds globally
+        // Run reminder check every minute globally
         const interval = setInterval(async () => {
             await checkReminder();
-        }, 10000); // Adjust as needed
+        }, 60000); 
 
         return () => clearInterval(interval); // Cleanup on unmount
     }, []);
@@ -52,6 +53,7 @@ const App = () => {
                 <Route path="/" element={<Home />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/attendance" element={<Attendance />} />
+                <Route path="/history/:id" element={<SubjectHistoryPage />} />
                 <Route path="/settings" element={<Settings />} />
             </Routes>
             <FloatingSettingsButton />
