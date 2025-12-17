@@ -248,7 +248,7 @@ const DashboardPage = () => {
     };
 
     return (
-        <div className="p-4 sm:p-8 flex flex-col items-center min-h-screen bg-base-100 text-base-content">
+        <div className="p-4 sm:p-8 flex flex-col items-center justify-center min-h-screen bg-base-100 text-base-content">
             {/* Header */}
             <div className="w-full max-w-6xl flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold">
