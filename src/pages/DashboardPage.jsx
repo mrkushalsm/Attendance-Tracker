@@ -262,14 +262,14 @@ const DashboardPage = () => {
                 
                 {/* Critical Warning Card - Only shows if action needed */}
                 {lowAttendanceList.length > 0 && (
-                    <div className="card bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 shadow-md">
+                    <div className="card bg-base-200 border-l-4 border-error shadow-md">
                         <div className="card-body p-4">
-                            <h3 className="text-lg font-bold text-red-800 dark:text-red-200 flex items-center mb-2">
+                            <h3 className="text-lg font-bold text-error flex items-center mb-2">
                                 <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
                                 Action Needed
                             </h3>
-                            <div className="text-sm text-red-700 dark:text-red-300">
-                                <span className="font-semibold">{lowAttendanceList.length} Subject{lowAttendanceList.length > 1 ? 's' : ''}</span> below 75%.
+                            <div className="text-sm text-base-content/80">
+                                <span className="font-semibold text-error">{lowAttendanceList.length} Subject{lowAttendanceList.length > 1 ? 's' : ''}</span> below 75%.
                                 <ul className="list-disc list-inside mt-1 ml-1 opacity-80">
                                     {lowAttendanceList.map((sub, i) => (
                                         <li key={i}>{sub.name} ({sub.percentage}%)</li>
