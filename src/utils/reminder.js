@@ -40,6 +40,8 @@ export const checkReminder = async () => {
     try {
         const setting = await db.settings.get("collegeEndTime");
 
+        if (!setting) return false; // Exit if no time set
+
         const storedEndTime = setting.value;
 
         // Get current time in HH:MM format

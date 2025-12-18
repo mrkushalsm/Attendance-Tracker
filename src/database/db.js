@@ -1,13 +1,9 @@
 import Dexie from "dexie";
 
-export const db = new Dexie("AttendanceDB");
+export const db = new Dexie("AttendanceTracker_v4");
 
-// Define database schema
+// Define database schema for v4 (Fresh Start)
 db.version(1).stores({
-    subjects: "++id, name, totalStrictClasses, totalRelaxedClasses, attendanceRecords",
-});
-
-// Upgrade database to include settings table
-db.version(2).stores({
-    settings: "id, value", // For storing general settings like college end time
+    subjects: "++id, name, totalStrictClasses, totalRelaxedClasses, attendanceRecords, schedule",
+    settings: "id, value"
 });
