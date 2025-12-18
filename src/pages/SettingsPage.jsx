@@ -8,6 +8,7 @@ const SettingsPage = () => {
     const navigate = useNavigate();
     const [theme, setTheme] = useState(localStorage.getItem("theme") || "emerald");
     const [endTime, setEndTime] = useState("");
+    const [attendanceGoal, setAttendanceGoal] = useState(75);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [importData, setImportData] = useState(null);
 
@@ -17,17 +18,18 @@ const SettingsPage = () => {
     }, [theme]);
 
     useEffect(() => {
-        const fetchEndTime = async () => {
+        const fetchSettings = async () => {
             try {
-                const setting = await db.settings.get("collegeEndTime");
-                if (setting) {
-                    setEndTime(setting.value);
-                }
+                const timeSetting = await db.settings.get("collegeEndTime");
+                if (timeSetting) setEndTime(timeSetting.value);
+
+                const goalSetting = await db.settings.get("attendanceGoal");
+                if (goalSetting) setAttendanceGoal(goalSetting.value);
             } catch (error) {
-                console.error("Error fetching college end time:", error);
+                console.error("Error fetching settings:", error);
             }
         };
-        fetchEndTime();
+        fetchSettings();
     }, []);
 
     const saveEndTime = async () => {
@@ -37,6 +39,16 @@ const SettingsPage = () => {
         } catch (error) {
             console.error("Error saving college end time:", error);
             alert("❌ Failed to save college end time.");
+        }
+    };
+
+    const saveAttendanceGoal = async () => {
+        try {
+            await db.settings.put({ id: "attendanceGoal", value: attendanceGoal });
+            alert("✅ Attendance goal saved!");
+        } catch (error) {
+            console.error("Error saving attendance goal:", error);
+            alert("❌ Failed to save attendance goal.");
         }
     };
 
@@ -142,6 +154,34 @@ const SettingsPage = () => {
                                 className="btn btn-primary w-full h-14 text-lg rounded-xl shadow-md">
                             <FontAwesomeIcon icon={theme === "emerald" ? faSun : faMoon} className="mr-2" />
                             {theme === "emerald" ? "Switch to Dark Mode" : "Switch to Light Mode"}
+                        </button>
+                    </div>
+
+                    {/* Attendance Goal Card */}
+                    <div className="bg-base-200 p-6 rounded-2xl shadow-sm">
+                        <div className="flex justify-between items-center mb-2 px-1">
+                            <h2 className="text-lg font-semibold">Attendance Goal</h2>
+                            <span className="badge badge-primary font-bold text-lg p-3">{attendanceGoal}%</span>
+                        </div>
+                        <p className="text-sm opacity-60 mb-4 px-1">Minimum required attendance percentage.</p>
+                        
+                        <div className="flex gap-4 items-center">
+                            <input 
+                                type="range" 
+                                min="0" 
+                                max="100" 
+                                value={attendanceGoal} 
+                                onChange={(e) => setAttendanceGoal(Number(e.target.value))}
+                                className="range range-primary range-sm" 
+                            />
+                        </div>
+                        <div className="flex justify-between text-xs px-1 mt-1 opacity-50 font-mono">
+                            <span>0%</span>
+                            <span>50%</span>
+                            <span>100%</span>
+                        </div>
+                        <button onClick={saveAttendanceGoal} className="btn btn-neutral w-full mt-4 rounded-xl">
+                            Save Goal
                         </button>
                     </div>
 

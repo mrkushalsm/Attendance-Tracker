@@ -196,17 +196,30 @@ import {
 const DashboardPage = () => {
     const [subjects, setSubjects] = useState([]);
     const [lowAttendanceList, setLowAttendanceList] = useState([]);
+    const [attendanceGoal, setAttendanceGoal] = useState(75);
 
     useEffect(() => {
         const fetchData = async () => {
+             // Fetch settings first
+             try {
+                const goalSetting = await db.settings.get("attendanceGoal");
+                if (goalSetting) setAttendanceGoal(goalSetting.value);
+            } catch (error) {
+                console.error("Error fetching settings:", error);
+            }
+
             const storedSubjects = await db.subjects.toArray();
             setSubjects(storedSubjects);
             
+            // Get the goal for calculation (default 75 if state update is slow, but we settled local var)
+            const goalPercent = (await db.settings.get("attendanceGoal"))?.value || 75;
+            const threshold = goalPercent / 100;
+
             // Calculate low attendance subjects for the top warning card
             const low = storedSubjects.filter(sub => {
                 const present = sub.attendanceRecords?.filter(a => a.status === "Present").length || 0;
                 const total = sub.totalStrictClasses || 0;
-                return total > 0 && (present / total) < 0.75;
+                return total > 0 && (present / total) < threshold;
             }).map(sub => ({
                  name: sub.name,
                  percentage: ((sub.attendanceRecords?.filter(a => a.status === "Present").length || 0) / sub.totalStrictClasses * 100).toFixed(0)
@@ -223,10 +236,16 @@ const DashboardPage = () => {
     const getInsightBadge = (present, total, totalStrict) => {
          if (totalStrict === 0) return null;
          const percentage = present / totalStrict;
+         const threshold = attendanceGoal / 100;
 
-         if (percentage < 0.75) {
+         if (percentage < threshold) {
              // Recovery Needed
-             const needed = Math.ceil(((0.75 * totalStrict) - present) / 0.25);
+             // Formula: (P + x) / (T + x) = Threshold
+             // P + x = Threshold * T + Threshold * x
+             // x (1 - Threshold) = Threshold * T - P
+             // x = (Threshold * T - P) / (1 - Threshold)
+             const needed = Math.ceil(((threshold * totalStrict) - present) / (1 - threshold));
+             
              const val = Math.max(needed, 1);
              return (
                  <span className="badge badge-error text-white font-bold ml-2 text-xs">
@@ -235,7 +254,11 @@ const DashboardPage = () => {
              );
          } else {
              // Safe Bunks
-             const bunks = Math.floor((present / 0.75) - totalStrict);
+             // Formula: P / (T + x) = Threshold
+             // P = Threshold * T + Threshold * x
+             // Threshold * x = P - Threshold * T
+             // x = (P / Threshold) - T
+             const bunks = Math.floor((present / threshold) - totalStrict);
              if (bunks > 0) {
                  return (
                      <span className="badge badge-success text-white font-bold ml-2 text-xs">
@@ -271,7 +294,7 @@ const DashboardPage = () => {
                                 Action Needed
                             </h3>
                             <div className="text-base text-base-content/80">
-                                <span className="font-semibold text-error">{lowAttendanceList.length} Subject{lowAttendanceList.length > 1 ? 's' : ''}</span> below 75%.
+                                <span className="font-semibold text-error">{lowAttendanceList.length} Subject{lowAttendanceList.length > 1 ? 's' : ''}</span> below {attendanceGoal}%.
                                 <ul className="list-disc list-inside mt-2 ml-2 opacity-80 grid grid-cols-1 sm:grid-cols-2 gap-x-4">
                                     {lowAttendanceList.map((sub, i) => (
                                         <li key={i}>{sub.name} ({sub.percentage}%)</li>
@@ -294,7 +317,7 @@ const DashboardPage = () => {
                             {subjects.map(({ id, name, attendanceRecords, totalStrictClasses, totalRelaxedClasses }) => {
                                 const strictPresent = attendanceRecords?.filter((a) => a.status === "Present").length || 0;
                                 const pct = totalStrictClasses > 0 ? (strictPresent / totalStrictClasses) * 100 : 0;
-                                const isLow = pct < 75 && totalStrictClasses > 0;
+                                const isLow = pct < attendanceGoal && totalStrictClasses > 0;
                                 
                                 return (
                                     <div key={id} className={`collapse collapse-arrow bg-base-200 border ${isLow ? 'border-red-200 dark:border-red-900/50' : 'border-base-300'} shadow-sm rounded-2xl h-fit`}>
