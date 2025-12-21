@@ -14,7 +14,7 @@ import {
 import { toast } from "react-hot-toast";
 
 const SubjectHistoryPage = () => {
-    const { id } = useParams();
+    const { subjectId: id } = useParams();
     const navigate = useNavigate();
     const [subject, setSubject] = useState(null);
     const [history, setHistory] = useState([]);
@@ -22,7 +22,15 @@ const SubjectHistoryPage = () => {
     useEffect(() => {
         const fetchData = async () => {
             if (!id) return;
-            const sub = await db.subjects.get(parseInt(id));
+            
+            // Try lookup as Number first (native)
+            let sub = await db.subjects.get(parseInt(id));
+            
+            // Fallback: Try as String (imported data)
+            if (!sub) {
+                sub = await db.subjects.get(id.toString());
+            }
+
             if (sub) {
                 setSubject(sub);
                 // Sort by date descending (newest first), then by timestamp desc
@@ -33,6 +41,10 @@ const SubjectHistoryPage = () => {
                     return (b.timestamp || 0) - (a.timestamp || 0);
                 });
                 setHistory(sorted);
+            } else {
+                console.error("Subject not found for ID:", id);
+                toast.error("Subject not found");
+                navigate("/dashboard");
             }
         };
         fetchData();
@@ -71,7 +83,7 @@ const SubjectHistoryPage = () => {
             const newStrictTotal = Math.max(0, (subject.totalStrictClasses || 0) + strictDelta);
             const newRelaxedTotal = Math.max(0, (subject.totalRelaxedClasses || 0) + relaxedDelta);
 
-            await db.subjects.update(parseInt(id), {
+            await db.subjects.update(subject.id, {
                 attendanceRecords: updatedRecords,
                 totalStrictClasses: newStrictTotal,
                 totalRelaxedClasses: newRelaxedTotal
