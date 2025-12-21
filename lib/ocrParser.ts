@@ -1,10 +1,14 @@
 import Tesseract from 'tesseract.js';
+import { Subject } from './db';
+
+interface ParsedSubject extends Subject {
+    // Helper type for matching structure before DB insertion
+}
 
 /**
- * Parses OCR text to extract subjects and their schedules.
- * Returns an array of subjects with schedule: { name: "Maths", schedule: ["Monday", "Wednesday"] }
+ * Parses OCR text to extract subjects.
  */
-export const parseTimetable = async (imageFile, onProgress) => {
+export const parseTimetable = async (imageFile: File, onProgress?: (progress: number) => void): Promise<Subject[]> => {
     try {
         const result = await Tesseract.recognize(
             imageFile,
@@ -28,29 +32,19 @@ export const parseTimetable = async (imageFile, onProgress) => {
     }
 };
 
-/**
- * Heuristic parsing logic.
- * Simple V1: Splits by lines, looks for common day names, assumes other text is subject?
- * Actually, for V1, let's just extract unique words that look like subjects and map them to "all days" or let user edit.
- * Smart V2 (Regex):
- * Look for "Mon", "Tue"... 
- * If a line has "Mon 10:00 Maths", extract it.
- */
-const parseTextToSubjects = (text) => {
+const parseTextToSubjects = (text: string): Subject[] => {
     const lines = text.split('\n').filter(line => line.trim().length > 0);
-    const subjects = [];
+    const subjects: Subject[] = [];
     const dayKeywords = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
-    // Basic heuristic: lines that aren't just days or times are likely subjects.
-    // This is "dirty" parsing, relying on the user to fix it in the modal.
     lines.forEach(line => {
         const lower = line.toLowerCase();
 
-        // Skip lines that are just day headers like "Monday Tuesday..."
+        // Skip lines that are just day headers
         if (dayKeywords.every(d => lower.includes(d))) return;
 
         // Try to identify potential subject names (words > 2 chars, not numbers)
-        const words = line.split(/\s+/).filter(w => w.length > 2 && isNaN(w));
+        const words = line.split(/\s+/).filter(w => w.length > 2 && isNaN(Number(w)));
 
         if (words.length > 0) {
             const subjectName = words.join(' ');
@@ -58,9 +52,9 @@ const parseTextToSubjects = (text) => {
             if (!subjects.some(s => s.name === subjectName)) {
                 subjects.push({
                     name: subjectName,
-                    totalStrictClasses: 0, // Default
+                    totalStrictClasses: 0,
                     totalRelaxedClasses: 0,
-                    schedule: [], // To be filled by user
+                    schedule: [],
                     attendanceRecords: []
                 });
             }

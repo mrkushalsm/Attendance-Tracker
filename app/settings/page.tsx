@@ -1,24 +1,46 @@
+"use client";
+
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faSun, faMoon, faClock, faFileImport, faFileExport, faCamera, faSpinner, faTrash } from "@fortawesome/free-solid-svg-icons";
-import { db } from "../database/db";
-import { parseTimetable } from "../utils/ocrParser";
+import { db, Subject, Setting } from "../../lib/db";
+import { parseTimetable } from "../../lib/ocrParser";
+
+interface ImportData {
+    subjects?: Subject[];
+    settings?: Setting[];
+}
 
 const SettingsPage = () => {
-    const navigate = useNavigate();
-    const [theme, setTheme] = useState(localStorage.getItem("theme") || "emerald");
+    const router = useRouter();
+    const [theme, setTheme] = useState("");
     const [endTime, setEndTime] = useState("");
     const [attendanceGoal, setAttendanceGoal] = useState(75);
-    const [setupMode, setSetupMode] = useState("auto"); // Default to auto/visible if undefined
+    const [setupMode, setSetupMode] = useState<string | null>("manual"); // Default to manual (hidden) to prevent flash for existing users
     
     // UI States
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
-    const [importData, setImportData] = useState(null); // { subjects: [] }
+    const [importData, setImportData] = useState<ImportData | null>(null);
     const [scanProgress, setScanProgress] = useState(0);
 
     useEffect(() => {
+        // Initialize theme from local storage safely
+        if (typeof window !== "undefined") {
+             const storedTheme = localStorage.getItem("theme") || "emerald";
+             setTheme(storedTheme);
+             // Ensure it matches what's on the html tag to prevent overwrite
+             const currentAttr = document.documentElement.getAttribute("data-theme");
+             if (currentAttr && currentAttr !== storedTheme) {
+                 // Trust the attribute if it differs (e.g. from layout script)
+                 setTheme(currentAttr);
+             }
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!theme) return; // Don't sync if not initialized
         document.documentElement.setAttribute("data-theme", theme);
         localStorage.setItem("theme", theme);
     }, [theme]);
@@ -32,11 +54,17 @@ const SettingsPage = () => {
                 const goalSetting = await db.settings.get("attendanceGoal");
                 if (goalSetting) setAttendanceGoal(goalSetting.value);
 
-                // Check Setup Mode (Manual vs Auto)
                 const modeSetting = await db.settings.get("setupMode");
-                if (modeSetting) setSetupMode(modeSetting.value);
+                if (modeSetting) {
+                    setSetupMode(modeSetting.value);
+                } else {
+                    // Check if existing user (has subjects) -> imply manual
+                    const count = await db.subjects.count();
+                    setSetupMode(count > 0 ? "manual" : "auto");
+                }
             } catch (error) {
                 console.error("Error fetching settings:", error);
+                setSetupMode("auto"); // Fallback
             }
         };
         fetchSettings();
@@ -84,14 +112,15 @@ const SettingsPage = () => {
     };
 
     // 📥 Import JSON Data
-    const handleImportFile = async (event) => {
-        if (!event.target.files.length) return;
+    const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (!event.target.files?.length) return;
         const file = event.target.files[0];
         const reader = new FileReader();
 
         reader.onload = async (e) => {
             try {
-                const parsedData = JSON.parse(e.target.result);
+                const result = e.target?.result as string;
+                const parsedData = JSON.parse(result);
                 if (!parsedData.subjects) throw new Error("Invalid format");
 
                 setImportData(parsedData);
@@ -106,7 +135,7 @@ const SettingsPage = () => {
     };
 
     // 📷 Handle Timetable Image Upload (OCR)
-    const handleTimetableUpload = async (event) => {
+    const handleTimetableUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
@@ -124,8 +153,6 @@ const SettingsPage = () => {
                 return;
             }
 
-            // Format for compatibility with existing import modal
-            // In V2, we might want to capture the schedule too, but for now we focus on Names
             setImportData({
                 subjects: extractedSubjects.map(sub => ({
                     ...sub,
@@ -141,13 +168,14 @@ const SettingsPage = () => {
             alert("Failed to scan timetable. Please try again.");
         } finally {
             setIsScanning(false);
-            event.target.value = ""; // Reset input
+            if (event.target) event.target.value = "";
         }
     };
 
     // ✏️ Handle Editing in the Import Preview Table
-    const handleEditChange = (index, field, value) => {
+    const handleEditChange = (index: number, field: keyof Subject, value: string) => {
         setImportData((prevData) => {
+            if (!prevData?.subjects) return prevData;
             const updatedSubjects = [...prevData.subjects];
             updatedSubjects[index] = { ...updatedSubjects[index], [field]: value };
             return { ...prevData, subjects: updatedSubjects };
@@ -155,20 +183,18 @@ const SettingsPage = () => {
     };
 
     // ✅ Confirm Import
-    const confirmImport = async (mode) => {
+    const confirmImport = async (mode: "overwrite" | "append") => {
         try {
             if (!importData) return;
             if (mode === "overwrite") {
                 await db.subjects.clear();
-                // Don't clear settings if it's just a timetable import!
-                // We'll only clear settings if importData HAS settings (which comes from JSON backup, not OCR)
                 if (importData.settings) await db.settings.clear();
             }
 
             if (importData.subjects) {
-                // Remove ID so Dexie auto-increments for new entries (unless restoring backup with IDs)
-                // For OCR, IDs are undefined anyway.
+                // @ts-ignore - Strip IDs to allow auto-increment if needed or preserve if present
                 const cleanSubjects = importData.subjects.map(({ id, ...rest }) => rest);
+                // @ts-ignore
                 await db.subjects.bulkPut(cleanSubjects);
             }
             if (importData.settings) {
@@ -178,8 +204,6 @@ const SettingsPage = () => {
             alert("✅ Import successful!");
             setIsPreviewOpen(false);
             
-            // If setupMode was 'auto', we can now consider them onboarding complete?
-            // Optional: navigate('/dashboard');
         } catch (error) {
             alert("❌ Import failed!");
             console.error("Import Error:", error);
@@ -193,7 +217,7 @@ const SettingsPage = () => {
                 <h1 className="text-3xl font-bold">
                     ⚙️ Settings
                 </h1>
-                <button onClick={() => navigate(-1)} className="btn btn-ghost btn-circle">
+                <button onClick={() => router.back()} className="btn btn-ghost btn-circle">
                     <FontAwesomeIcon icon={faArrowLeft} className="text-xl" />
                 </button>
             </div>
@@ -257,7 +281,7 @@ const SettingsPage = () => {
 
                 {/* Column 2: Import/Export + Timetable */}
                 <div className="space-y-6">
-                    {/* Setup Mode: Auto - Timetable Import (LOCKED for Manual Users) */}
+                    {/* Setup Mode: Auto - Timetable Import */}
                     {setupMode !== 'manual' && (
                         <div className="bg-base-200 p-6 rounded-2xl shadow-sm border-2 border-primary/20">
                             <h2 className="text-lg font-bold mb-3 px-1 flex justify-between items-center">
@@ -329,7 +353,6 @@ const SettingsPage = () => {
                                         req.onerror = (e) => console.error("Native delete failed", e);
                                         req.onsuccess = () => console.log("Native delete success");
                                         
-                                        // Wait a moment for native delete to trigger
                                         await new Promise(r => setTimeout(r, 100));
                                     } catch (e) {
                                         console.error("Reset encountered errors (ignoring):", e);
@@ -344,8 +367,8 @@ const SettingsPage = () => {
                                             }
                                         }
                                         
-                                        alert("Application reset. Reloading (Hard Reload might be needed if errors persist).");
-                                        window.location.reload();
+                                        alert("Application reset. Redirecting to home.");
+                                        window.location.href = "/";
                                     }
                                 }
                             }}
@@ -358,7 +381,7 @@ const SettingsPage = () => {
             </div>
 
             {/* 📋 Preview Modal */}
-            {isPreviewOpen && (
+            {isPreviewOpen && importData && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
                     <div className="bg-base-200 p-6 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
                         <div className="flex justify-between items-center mb-4">
@@ -381,7 +404,6 @@ const SettingsPage = () => {
                                 <tr>
                                     <th>#</th>
                                     <th>Subject Name</th>
-                                    {/* Only show stats columns if it's a backup restore, otherwise irrelevant for new import */}
                                     {importData?.settings && (
                                         <>
                                             <th>Present</th>
@@ -392,7 +414,6 @@ const SettingsPage = () => {
                                 </thead>
                                 <tbody>
                                 {importData?.subjects?.map((subject, index) => {
-                                    // For backup restore, show stats. For OCR, simplistic view.
                                     const attendanceRecords = subject.attendanceRecords || [];
                                     const present = attendanceRecords.filter((record) => record.status === "Present").length;
                                     
@@ -430,9 +451,6 @@ const SettingsPage = () => {
                                 Cancel
                             </button>
                             
-                            {/* If it's a fresh scan, usually we append or overwrite? Default to Append for safety, or Overwrite if new user? 
-                                Let's offer both but make "Save" the primary action which appends/overwrites logic.
-                            */}
                             <button onClick={() => confirmImport("overwrite")} className="btn btn-sm btn-warning">
                                 {importData?.settings ? "Overwrite All Data" : "Replace Existing Subjects"}
                             </button>

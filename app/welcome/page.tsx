@@ -1,29 +1,25 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { db } from '../database/db';
+"use client";
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { db } from '../../lib/db';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faKeyboard, faRobot, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
 
 const WelcomePage = () => {
-    const navigate = useNavigate();
+    const router = useRouter();
     const [loading, setLoading] = useState(false);
 
-    const handleModeSelect = async (mode) => {
+    const handleModeSelect = async (mode: "manual" | "auto") => {
         setLoading(true);
         try {
             await db.settings.put({ id: 'setupMode', value: mode });
             
             if (mode === 'manual') {
-                // If Manual, go straight to adding subjects
-                navigate('/attendance');
+                router.push('/attendance');
             } else {
-                // If Auto, go to Settings to start the import process (or trigger it here later)
-                // For now, let's redirect to settings with a query param or state to auto-open modal?
-                // Actually, the plan says "Sets setupMode='auto', prompts File Upload".
-                // Since the upload UI is complex, we'll redirect to a dedicated Import flow or Settings.
-                // Re-reading plan: "Sets setupMode='auto', prompts File Upload".
-                // Simplest V1: Redirect to Settings where the Import button is now visible.
-                navigate('/settings?openImport=true'); 
+                // Redirect to settings to trigger Import (V1 approach)
+                router.push('/settings?openImport=true'); 
             }
         } catch (error) {
             console.error("Error saving mode:", error);

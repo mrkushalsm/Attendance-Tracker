@@ -1,6 +1,7 @@
+"use client";
+
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { db } from "../database/db";
+import { useParams, useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { 
     faArrowLeft, 
@@ -12,12 +13,15 @@ import {
     faClock
 } from "@fortawesome/free-solid-svg-icons";
 import { toast } from "react-hot-toast";
+import { db, Subject, AttendanceRecord } from "../../../lib/db";
 
 const SubjectHistoryPage = () => {
-    const { subjectId: id } = useParams();
-    const navigate = useNavigate();
-    const [subject, setSubject] = useState(null);
-    const [history, setHistory] = useState([]);
+    const params = useParams();
+    const router = useRouter();
+    const id = params?.subjectId as string; // Matches [subjectId] folder
+    
+    const [subject, setSubject] = useState<Subject | null>(null);
+    const [history, setHistory] = useState<AttendanceRecord[]>([]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -28,30 +32,32 @@ const SubjectHistoryPage = () => {
             
             // Fallback: Try as String (imported data)
             if (!sub) {
-                sub = await db.subjects.get(id.toString());
+                // @ts-ignore
+                sub = await db.subjects.get(id);
             }
 
             if (sub) {
                 setSubject(sub);
                 // Sort by date descending (newest first), then by timestamp desc
                 const sorted = [...(sub.attendanceRecords || [])].sort((a, b) => {
-                    const dateA = new Date(a.date);
-                    const dateB = new Date(b.date);
+                    const dateA = new Date(a.date).getTime(); // safe convert
+                    const dateB = new Date(b.date).getTime();
                     if (dateB - dateA !== 0) return dateB - dateA;
+                    // @ts-ignore
                     return (b.timestamp || 0) - (a.timestamp || 0);
                 });
                 setHistory(sorted);
             } else {
                 console.error("Subject not found for ID:", id);
                 toast.error("Subject not found");
-                navigate("/dashboard");
+                router.push("/dashboard");
             }
         };
         fetchData();
-    }, [id]);
+    }, [id, router]);
 
-    const handleStatusChange = async (timestamp, newStatus) => {
-        if (!subject) return;
+    const handleStatusChange = async (timestamp: number, newStatus: AttendanceRecord['status']) => {
+        if (!subject || !subject.id) return;
 
         try {
             // 1. Find the old record
@@ -90,14 +96,14 @@ const SubjectHistoryPage = () => {
             });
 
             // 5. Update Local State
-            setSubject(prev => ({
+            setSubject(prev => prev ? ({
                 ...prev,
                 attendanceRecords: updatedRecords,
                 totalStrictClasses: newStrictTotal,
                 totalRelaxedClasses: newRelaxedTotal
-            }));
+            }) : null);
             
-            // Re-sort history to be safe (though timestamp/date shouldn't change usually)
+            // Re-sort history to be safe
             setHistory(prev => prev.map(r => r.timestamp === timestamp ? { ...r, status: newStatus } : r));
 
             toast.success("Attendance updated!");
@@ -110,7 +116,7 @@ const SubjectHistoryPage = () => {
     if (!subject) return <div className="p-10 text-center">Loading...</div>;
 
     // Helper for formatting date
-    const formatDate = (dateStr) => {
+    const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
         return {
             day: date.getDate(),
@@ -120,7 +126,7 @@ const SubjectHistoryPage = () => {
     };
 
     // Badge styling helper
-    const getBadgeStyle = (status) => {
+    const getBadgeStyle = (status: AttendanceRecord['status']) => {
         switch (status) {
             case "Present": return "badge-success text-white";
             case "Absent": return "badge-error text-white";
@@ -136,7 +142,7 @@ const SubjectHistoryPage = () => {
             <div className="sticky top-0 z-50 w-full bg-base-100/80 backdrop-blur-md border-b border-base-200 dark:border-base-300 shadow-sm">
                 <div className="max-w-md mx-auto px-4 py-3">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => navigate("/dashboard")} className="btn btn-ghost btn-circle btn-sm">
+                        <button onClick={() => router.push("/dashboard")} className="btn btn-ghost btn-circle btn-sm">
                             <FontAwesomeIcon icon={faArrowLeft} />
                         </button>
                         <div>
@@ -189,7 +195,7 @@ const SubjectHistoryPage = () => {
                                         <div className="font-medium">{weekday}</div>
                                         <div className="text-xs text-base-content/50 flex items-center gap-1">
                                             <FontAwesomeIcon icon={faClock} style={{ fontSize: '0.7em' }} />
-                                            {new Date(record.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            {record.timestamp ? new Date(record.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
                                         </div>
                                     </div>
                                 </div>
@@ -204,10 +210,10 @@ const SubjectHistoryPage = () => {
                                         <span className="font-semibold">{record.status}</span>
                                     </div>
                                     <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow-xl bg-base-100 rounded-box w-40 border border-base-200 mt-2">
-                                        <li><a onClick={() => handleStatusChange(record.timestamp, "Present")} className="text-success"><FontAwesomeIcon icon={faCheck} /> Present</a></li>
-                                        <li><a onClick={() => handleStatusChange(record.timestamp, "Absent")} className="text-error"><FontAwesomeIcon icon={faTimes} /> Absent</a></li>
-                                        <li><a onClick={() => handleStatusChange(record.timestamp, "Excused")} className="text-warning"><FontAwesomeIcon icon={faLightbulb} /> Excused</a></li>
-                                        <li><a onClick={() => handleStatusChange(record.timestamp, "Sick Leave")} className="text-secondary"><FontAwesomeIcon icon={faFrown} /> Sick Leave</a></li>
+                                        <li><button onClick={() => handleStatusChange(record.timestamp, "Present")} className="text-success"><FontAwesomeIcon icon={faCheck} /> Present</button></li>
+                                        <li><button onClick={() => handleStatusChange(record.timestamp, "Absent")} className="text-error"><FontAwesomeIcon icon={faTimes} /> Absent</button></li>
+                                        <li><button onClick={() => handleStatusChange(record.timestamp, "Excused")} className="text-warning"><FontAwesomeIcon icon={faLightbulb} /> Excused</button></li>
+                                        <li><button onClick={() => handleStatusChange(record.timestamp, "Sick Leave")} className="text-secondary"><FontAwesomeIcon icon={faFrown} /> Sick Leave</button></li>
                                     </ul>
                                 </div>
                             </div>

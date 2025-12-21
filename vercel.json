@@ -1,14 +1,3 @@
 {
-    "rewrites": [
-        {
-            "source": "/(.*)",
-            "destination": "/index.html"
-        }
-    ],
-    "builds": [
-        {
-            "src": "package.json",
-            "use": "@vercel/static-build"
-        }
-    ]
+    "framework": "nextjs"
 }

@@ -1,6 +1,8 @@
+"use client";
+
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { db } from "../database/db";
+import Link from "next/link";
+import { db, Subject, AttendanceRecord } from "../../lib/db";
 import { toast } from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -14,10 +16,16 @@ import {
     faTrash
 } from "@fortawesome/free-solid-svg-icons";
 
+interface DailySession {
+    timestamp: number;
+    status: AttendanceRecord['status'] | null;
+    date: string;
+}
+
 const AttendancePage = () => {
-    const [subjects, setSubjects] = useState([]);
+    const [subjects, setSubjects] = useState<Subject[]>([]);
     const [newSubject, setNewSubject] = useState("");
-    const [todaySessions, setTodaySessions] = useState({});
+    const [todaySessions, setTodaySessions] = useState<{[key: number]: DailySession[]}>({});
 
     const getToday = () => new Date().toLocaleDateString("en-CA");
 
@@ -27,15 +35,20 @@ const AttendancePage = () => {
 
     const fetchSubjects = async () => {
         const storedSubjects = await db.subjects.toArray();
-        const initialSessions = {};
+        const initialSessions: {[key: number]: DailySession[]} = {};
         
         // Initialize sessions for each subject
         storedSubjects.forEach(subject => {
              const todayRecords = subject.attendanceRecords?.filter(a => a.date === getToday()) || [];
-             // If records exist, use them. If not, start with one empty session.
-             initialSessions[subject.id] = todayRecords.length > 0 
-                ? todayRecords.map(r => ({ ...r, timestamp: r.timestamp || Date.now() })) // Ensure timestamp exists
-                : [{ timestamp: Date.now(), status: null, date: getToday() }];
+             if (subject.id) {
+                initialSessions[subject.id] = todayRecords.length > 0 
+                    ? todayRecords.map(r => ({ 
+                        ...r, 
+                        timestamp: r.timestamp || Date.now(),
+                        status: r.status // Ensure status type safety
+                    }))
+                    : [{ timestamp: Date.now(), status: null, date: getToday() }];
+             }
         });
 
         setSubjects(storedSubjects);
@@ -44,39 +57,56 @@ const AttendancePage = () => {
 
     const addSubject = async () => {
         if (newSubject.trim() !== "" && !subjects.some((s) => s.name === newSubject)) {
-            const id = await db.subjects.add({ name: newSubject, attendanceRecords: [], totalStrictClasses: 0, totalRelaxedClasses: 0 });
-            setSubjects([...subjects, { id, name: newSubject, attendanceRecords: [], attendance: null }]);
-            setTodaySessions(prev => ({ ...prev, [id]: [{ timestamp: Date.now(), status: null, date: getToday() }] }));
+            const id = await db.subjects.add({ 
+                name: newSubject, 
+                attendanceRecords: [], 
+                totalStrictClasses: 0, 
+                totalRelaxedClasses: 0,
+                schedule: []
+            });
+            setSubjects([...subjects, { 
+                id, 
+                name: newSubject, 
+                attendanceRecords: [], 
+                totalStrictClasses: 0,
+                totalRelaxedClasses: 0,
+                schedule: []
+            }]);
+            setTodaySessions(prev => ({ 
+                ...prev, 
+                [id]: [{ timestamp: Date.now(), status: null, date: getToday() }] 
+            }));
             setNewSubject("");
         }
     };
 
-    const addSession = (subjectId) => {
+    const addSession = (subjectId: number) => {
         setTodaySessions(prev => ({
             ...prev,
-            [subjectId]: [...prev[subjectId], { timestamp: Date.now(), status: null, date: getToday() }]
+            [subjectId]: [...(prev[subjectId] || []), { timestamp: Date.now(), status: null, date: getToday() }]
         }));
     };
 
-    const removeSession = async (subjectId, sessionTimestamp) => {
-        const sessionToRemove = todaySessions[subjectId].find(s => s.timestamp === sessionTimestamp);
-        
+    const removeSession = async (subjectId: number, sessionTimestamp: number) => {
+        const sessionToRemove = todaySessions[subjectId]?.find(s => s.timestamp === sessionTimestamp);
+        if (!sessionToRemove) return;
+
         // Remove from local state
         const updatedSessions = todaySessions[subjectId].filter(s => s.timestamp !== sessionTimestamp);
         setTodaySessions(prev => ({ ...prev, [subjectId]: updatedSessions }));
 
         // If it was a saved record, update DB
-        if (sessionToRemove?.status) {
+        if (sessionToRemove.status) {
              const subject = await db.subjects.get(subjectId);
-             
-             // Recalculate totals
+             if (!subject) return;
+
              let newStrictTotal = subject.totalStrictClasses;
              let newRelaxedTotal = subject.totalRelaxedClasses;
 
              if (["Present", "Absent"].includes(sessionToRemove.status)) newStrictTotal--;
              if (["Excused", "Sick Leave"].includes(sessionToRemove.status)) newRelaxedTotal--;
 
-             const updatedRecords = subject.attendanceRecords.filter(r => r.timestamp !== sessionTimestamp && (r.date !== sessionToRemove.date || r.status !== sessionToRemove.status)); // Fallback filter if timestamp missing in old records
+             const updatedRecords = subject.attendanceRecords.filter(r => r.timestamp !== sessionTimestamp);
              
              await db.subjects.update(subjectId, {
                  attendanceRecords: updatedRecords,
@@ -84,14 +114,18 @@ const AttendancePage = () => {
                  totalRelaxedClasses: Math.max(0, newRelaxedTotal)
              });
              
-             fetchSubjects(); // Refresh to ensure sync
+             fetchSubjects(); 
         }
     };
 
-    const markSession = async (subjectId, sessionTimestamp, status) => {
+    const markSession = async (subjectId: number, sessionTimestamp: number, status: AttendanceRecord['status']) => {
         const subject = await db.subjects.get(subjectId);
+        if (!subject) return;
+
         const currentSessions = todaySessions[subjectId];
         const sessionIndex = currentSessions.findIndex(s => s.timestamp === sessionTimestamp);
+        if (sessionIndex === -1) return;
+        
         const oldSession = currentSessions[sessionIndex];
 
         // Optimistic UI Update
@@ -106,22 +140,15 @@ const AttendancePage = () => {
         let newRelaxedTotal = subject.totalRelaxedClasses || 0;
         let updatedRecords = subject.attendanceRecords || [];
 
-        // If updating an existing saved record (has status previously)
         if (oldSession.status) {
-             if (oldSession.status === status) return; // No change
-
-             // Revert old counts
+             if (oldSession.status === status) return;
              if (["Present", "Absent"].includes(oldSession.status)) newStrictTotal--;
              if (["Excused", "Sick Leave"].includes(oldSession.status)) newRelaxedTotal--;
-             
-             // Update record in array
              updatedRecords = updatedRecords.map(r => r.timestamp === sessionTimestamp ? updatedSession : r);
         } else {
-             // New record
              updatedRecords.push(updatedSession);
         }
 
-        // Add new counts
         if (["Present", "Absent"].includes(status)) newStrictTotal++;
         if (["Excused", "Sick Leave"].includes(status)) newRelaxedTotal++;
 
@@ -130,9 +157,6 @@ const AttendancePage = () => {
             totalStrictClasses: newStrictTotal,
             totalRelaxedClasses: newRelaxedTotal
         });
-        
-        // Reload to ensure consistency (e.g. if we just saved a new record, it's now "saved")
-        // fetchSubjects(); // Optional, but good for data integrity
     };
 
     return (
@@ -142,14 +166,14 @@ const AttendancePage = () => {
                 <h1 className="text-3xl font-bold">
                     <FontAwesomeIcon className="mr-2" icon={faCalendarAlt} /> Mark Attendance
                 </h1>
-                <Link to="/dashboard" className="btn btn-ghost btn-sm btn-circle">
+                <Link href="/dashboard" className="btn btn-ghost btn-sm btn-circle">
                     <FontAwesomeIcon icon={faArrowLeft} className="text-xl" />
                 </Link>
             </div>
 
 
             <div className="w-full max-w-4xl space-y-8">
-                {/* Add Subject Input - Max Width constrained for better look */}
+                {/* Add Subject Input */}
                 <div className="join w-full max-w-lg mx-auto shadow-sm">
                     <input
                         type="text"
@@ -163,7 +187,7 @@ const AttendancePage = () => {
                     </button>
                 </div>
 
-                {/* Subject List - Responsive Grid */}
+                {/* Subject List */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {subjects.length === 0 ? (
                         <div className="col-span-full text-center py-10 opacity-50 bg-base-200 rounded-2xl border border-base-300 border-dashed">
@@ -178,23 +202,23 @@ const AttendancePage = () => {
                                 </div>
                                 
                                 <div className="collapse-content space-y-3">
-                                    {todaySessions[subject.id]?.map((session, index) => (
+                                    {subject.id && todaySessions[subject.id]?.map((session, index) => (
                                         <div key={session.timestamp} className="p-3 bg-base-100 rounded-xl mb-3 border border-base-300">
                                             {/* Status Buttons Grid */}
                                             <div className="grid grid-cols-4 gap-3 mb-2">
-                                                <button onClick={() => markSession(subject.id, session.timestamp, "Present")}
+                                                <button onClick={() => subject.id && markSession(subject.id, session.timestamp, "Present")}
                                                         className={`btn h-12 text-lg rounded-xl shadow-sm ${session.status === "Present" ? "btn-success text-white" : "btn-outline border-base-content/20 bg-base-100 hover:bg-base-200"}`}>
                                                     <FontAwesomeIcon icon={faCheck} />
                                                 </button>
-                                                <button onClick={() => markSession(subject.id, session.timestamp, "Absent")}
+                                                <button onClick={() => subject.id && markSession(subject.id, session.timestamp, "Absent")}
                                                         className={`btn h-12 text-lg rounded-xl shadow-sm ${session.status === "Absent" ? "btn-error text-white" : "btn-outline border-base-content/20 bg-base-100 hover:bg-base-200"}`}>
                                                     <FontAwesomeIcon icon={faTimes} />
                                                 </button>
-                                                <button onClick={() => markSession(subject.id, session.timestamp, "Excused")}
+                                                <button onClick={() => subject.id && markSession(subject.id, session.timestamp, "Excused")}
                                                         className={`btn h-12 text-lg rounded-xl shadow-sm ${session.status === "Excused" ? "btn-info text-white" : "btn-outline border-base-content/20 bg-base-100 hover:bg-base-200"}`}>
                                                     <FontAwesomeIcon icon={faLightbulb} />
                                                 </button>
-                                                <button onClick={() => markSession(subject.id, session.timestamp, "Sick Leave")}
+                                                <button onClick={() => subject.id && markSession(subject.id, session.timestamp, "Sick Leave")}
                                                         className={`btn h-12 text-lg rounded-xl shadow-sm ${session.status === "Sick Leave" ? "btn-secondary text-white" : "btn-outline border-base-content/20 bg-base-100 hover:bg-base-200"}`}>
                                                     <FontAwesomeIcon icon={faFrown} />
                                                 </button>
@@ -205,7 +229,7 @@ const AttendancePage = () => {
                                                 <div className="text-xs text-base-content/40 font-mono">
                                                     Session {index + 1}
                                                 </div>
-                                                <button onClick={() => removeSession(subject.id, session.timestamp)} 
+                                                <button onClick={() => subject.id && removeSession(subject.id, session.timestamp)} 
                                                         className="btn btn-ghost btn-xs text-error opacity-60 hover:opacity-100 hover:bg-error/10">
                                                     <FontAwesomeIcon icon={faTrash} className="mr-1" /> Remove
                                                 </button>
@@ -213,7 +237,7 @@ const AttendancePage = () => {
                                         </div>
                                     ))}
                                     
-                                    <button onClick={() => addSession(subject.id)} className="btn btn-ghost btn-sm w-full border-dashed border-2 border-base-content/20 text-xs">
+                                    <button onClick={() => subject.id && addSession(subject.id)} className="btn btn-ghost btn-sm w-full border-dashed border-2 border-base-content/20 text-xs">
                                         <FontAwesomeIcon icon={faPlusSquare} /> Split / Add Class
                                     </button>
                                 </div>
